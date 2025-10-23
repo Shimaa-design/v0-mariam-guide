@@ -864,7 +864,7 @@ export default function AzkarApp() {
       name: "العصر",
       verses: [
         { number: 1, arabic: "وَالْعَصْرِ", english: "By time," },
-        { number: 2, arabic: "إِنَّ الْإِنسَانَ لَفِي خُسْرٍ", english: "Indeed, mankind is in loss," },
+        { number: 2, arabic: "إِنَّ الْإِنسَانَ لَ فِي خُسْرٍ", english: "Indeed, mankind is in loss," },
         {
           number: 3,
           arabic: "إِلَّا الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ وَتَوَاصَوْا بِالْحَقِّ وَتَوَاصَوْا بِالصَّبْرِ",
@@ -995,6 +995,8 @@ export default function AzkarApp() {
   ]
 
   const currentCategory = azkarData[selectedCategory as keyof typeof azkarData]
+
+  const CategoryIcon = mainTab === "duaa" ? currentCategory.icon : mainTab === "quran" ? BookMarked : BookOpen
 
   const handleIncrement = (dhikrId: string, maxCount: number, currentIndex: number) => {
     setCounts((prev) => {
@@ -1136,7 +1138,8 @@ export default function AzkarApp() {
     return today.getDay() === 5 // 5 = Friday
   }
 
-  const CategoryIcon = mainTab === "duaa" ? currentCategory.icon : BookOpen
+  // The CategoryIcon variable is defined above
+  // const CategoryIcon = mainTab === "duaa" ? currentCategory.icon : BookOpen
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pb-24">
@@ -1601,7 +1604,7 @@ export default function AzkarApp() {
       {/* Floating Bottom Tabbar */}
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4">
         <div className="max-w-md mx-auto bg-white rounded-2xl shadow-2xl border border-gray-200">
-          <div className="flex items-center justify-around px-2 py-3">
+          <div className="flex items-center justify-around px-2 py-2">
             <button
               onClick={() => setMainTab("duaa")}
               className={`flex flex-col items-center justify-center flex-1 py-2 px-3 rounded-xl transition-all ${
