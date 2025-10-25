@@ -17,7 +17,24 @@ import {
   DoorOpen,
   AlertCircle,
   List,
+  Loader2,
 } from "lucide-react"
+
+interface QuranVerse {
+  number: number
+  arabic: string
+  english: string
+  isSpecial?: boolean
+  specialName?: string
+}
+
+interface QuranSurah {
+  number: number
+  name: string
+  englishName?: string
+  verses: QuranVerse[]
+  hasSpecialReminder?: boolean
+}
 
 export default function AzkarApp() {
   const [mainTab, setMainTab] = useState("duaa") // duaa, hadith, quran
@@ -31,9 +48,57 @@ export default function AzkarApp() {
   })
   const [expandedSurah, setExpandedSurah] = useState<number | null>(null)
   const [quranView, setQuranView] = useState<"list" | "reading">("list")
-  const [selectedSurah, setSelectedSurah] = useState<any>(null)
+  const [selectedSurah, setSelectedSurah] = useState<QuranSurah | null>(null)
+  const [quranData, setQuranData] = useState<QuranSurah[]>([])
+  const [isLoadingQuran, setIsLoadingQuran] = useState(false)
+  const [quranError, setQuranError] = useState<string | null>(null)
+  const [loadingProgress, setLoadingProgress] = useState(0)
   const dhikrRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const ayahRefs = useRef<Record<string, HTMLDivElement | null>>({})
+
+  useEffect(() => {
+    // Load Duaa counts
+    const savedCounts = localStorage.getItem("mariam-guide-duaa-counts")
+    if (savedCounts) {
+      try {
+        setCounts(JSON.parse(savedCounts))
+      } catch (error) {
+        console.error("Failed to load duaa counts:", error)
+      }
+    }
+
+    // Load read Hadith
+    const savedReadHadith = localStorage.getItem("mariam-guide-read-hadith")
+    if (savedReadHadith) {
+      try {
+        setReadHadith(new Set(JSON.parse(savedReadHadith)))
+      } catch (error) {
+        console.error("Failed to load read hadith:", error)
+      }
+    }
+
+    // Load Quran bookmark
+    const savedBookmark = localStorage.getItem("mariam-guide-quran-bookmark")
+    if (savedBookmark) {
+      try {
+        setQuranBookmark(JSON.parse(savedBookmark))
+      } catch (error) {
+        console.error("Failed to load quran bookmark:", error)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem("mariam-guide-duaa-counts", JSON.stringify(counts))
+  }, [counts])
+
+  useEffect(() => {
+    localStorage.setItem("mariam-guide-read-hadith", JSON.stringify(Array.from(readHadith)))
+  }, [readHadith])
+
+  useEffect(() => {
+    localStorage.setItem("mariam-guide-quran-bookmark", JSON.stringify(quranBookmark))
+  }, [quranBookmark])
 
   // Add custom scrollbar styling
   useEffect(() => {
@@ -60,6 +125,139 @@ export default function AzkarApp() {
   useEffect(() => {
     if (mainTab !== "quran") {
       setQuranView("list")
+    }
+  }, [mainTab])
+
+  useEffect(() => {
+    const fetchQuranData = async () => {
+      setIsLoadingQuran(true)
+      setQuranError(null)
+      setLoadingProgress(0)
+
+      try {
+        console.log("[v0] Starting to fetch Quran data...")
+
+        // Fetch the list of all surahs first
+        const surahListResponse = await fetch("https://api.alquran.cloud/v1/surah")
+        if (!surahListResponse.ok) {
+          throw new Error(`Failed to fetch surah list: ${surahListResponse.status}`)
+        }
+        const surahListData = await surahListResponse.json()
+        console.log("[v0] Fetched surah list successfully")
+
+        const allSurahs: QuranSurah[] = []
+        const BATCH_SIZE = 3
+        const BATCH_DELAY = 2000
+        const totalSurahs = surahListData.data.length
+
+        const fetchWithRetry = async (url: string, retries = 3, delay = 1000): Promise<Response> => {
+          for (let i = 0; i < retries; i++) {
+            try {
+              const response = await fetch(url)
+              if (response.ok) return response
+
+              // If rate limited (429) or server error (5xx), retry
+              if (response.status === 429 || response.status >= 500) {
+                console.log(`[v0] Retry ${i + 1}/${retries} for ${url} (status: ${response.status})`)
+                await new Promise((resolve) => setTimeout(resolve, delay * Math.pow(2, i)))
+                continue
+              }
+
+              throw new Error(`HTTP ${response.status}`)
+            } catch (error) {
+              if (i === retries - 1) throw error
+              console.log(`[v0] Retry ${i + 1}/${retries} after error:`, error)
+              await new Promise((resolve) => setTimeout(resolve, delay * Math.pow(2, i)))
+            }
+          }
+          throw new Error("Max retries reached")
+        }
+
+        for (let i = 0; i < totalSurahs; i += BATCH_SIZE) {
+          const batch = surahListData.data.slice(i, Math.min(i + BATCH_SIZE, totalSurahs))
+
+          console.log(
+            `[v0] Fetching batch ${Math.floor(i / BATCH_SIZE) + 1} (surahs ${i + 1}-${Math.min(i + BATCH_SIZE, totalSurahs)})`,
+          )
+
+          const batchPromises = batch.map(async (surahInfo: any) => {
+            const surahNumber = surahInfo.number
+
+            try {
+              // Fetch Arabic text
+              const arabicResponse = await fetchWithRetry(
+                `https://api.alquran.cloud/v1/surah/${surahNumber}/ar.alafasy`,
+              )
+              const arabicData = await arabicResponse.json()
+
+              await new Promise((resolve) => setTimeout(resolve, 300))
+
+              // Fetch English translation
+              const englishResponse = await fetchWithRetry(`https://api.alquran.cloud/v1/surah/${surahNumber}/en.asad`)
+              const englishData = await englishResponse.json()
+
+              // Combine Arabic and English
+              const verses: QuranVerse[] = arabicData.data.ayahs.map((ayah: any, index: number) => {
+                const verse: QuranVerse = {
+                  number: ayah.numberInSurah,
+                  arabic: ayah.text,
+                  english: englishData.data.ayahs[index].text,
+                }
+
+                // Mark Ayat al-Kursi (Surah 2, Ayah 255)
+                if (surahNumber === 2 && ayah.numberInSurah === 255) {
+                  verse.isSpecial = true
+                  verse.specialName = "آية الكرسي"
+                }
+
+                return verse
+              })
+
+              const surah: QuranSurah = {
+                number: surahNumber,
+                name: surahInfo.name,
+                englishName: surahInfo.englishName,
+                verses,
+                hasSpecialReminder: surahNumber === 18, // Al-Kahf
+              }
+
+              console.log(`[v0] Successfully fetched surah ${surahNumber}`)
+              return surah
+            } catch (error) {
+              console.error(`[v0] Error fetching surah ${surahNumber}:`, error)
+              throw new Error(
+                `Failed to fetch surah ${surahNumber}: ${error instanceof Error ? error.message : "Unknown error"}`,
+              )
+            }
+          })
+
+          const batchResults = await Promise.all(batchPromises)
+          allSurahs.push(...batchResults)
+
+          // Update progress
+          const progress = Math.round((allSurahs.length / totalSurahs) * 100)
+          setLoadingProgress(progress)
+          console.log(`[v0] Progress: ${progress}% (${allSurahs.length}/${totalSurahs} surahs)`)
+
+          if (i + BATCH_SIZE < totalSurahs) {
+            console.log(`[v0] Waiting ${BATCH_DELAY}ms before next batch...`)
+            await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY))
+          }
+        }
+
+        console.log("[v0] Successfully fetched all surahs")
+        setQuranData(allSurahs)
+        setIsLoadingQuran(false)
+      } catch (error) {
+        console.error("[v0] Error fetching Quran data:", error)
+        setQuranError(error instanceof Error ? error.message : "Failed to load Quran data")
+        setIsLoadingQuran(false)
+      }
+    }
+
+    // Only fetch if we don't have data yet and we're on the quran tab
+    if (quranData.length === 0 && mainTab === "quran") {
+      fetchQuranData()
     }
   }, [mainTab])
 
@@ -100,7 +298,7 @@ export default function AzkarApp() {
           id: "m5",
           arabic: "لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ",
           translation:
-            "There is no god but Allah alone, with no partner. His is the dominion and His is the praise, and He has power over all things",
+            "There is no god but Allah alone, with no partner. His is the dominion and His is the praise, and He has power on all things",
           count: 10,
         },
         {
@@ -186,7 +384,7 @@ export default function AzkarApp() {
           id: "p3",
           arabic: "لَا إِلَهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ، لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَيْءٍ قَدِيرٌ",
           translation:
-            "There is no god but Allah alone, with no partner. His is the dominion and His is the praise, and He has power over all things",
+            "There is no god but Allah alone, with no partner. His is the dominion and His is the praise, and He has power on all things",
           count: 1,
         },
         {
@@ -829,7 +1027,7 @@ export default function AzkarApp() {
       id: "h38",
       number: 38,
       arabic:
-        "مَنْ عَادَى لِي وَلِيًّا فَقَدْ آذَنْتُهُ بِالْحَرْبِ، وَمَا تَقَرَّبَ إلَيَّ عَبْدِي بِشَيْءٍ أَحَبَّ إلَيَّ مِمَّا افْتَرَضْتُهُ عَلَيْهِ، وَلَا يَزَالُ عَبْدِي يَتَقَرَّبُ إلَيَّ بِالنَّوَافِلِ حَتَّى أُحِبَّهُ، فَإِذَا أَحْبَبْتُهُ كُنْت سَمْعَهُ الَّذِي يَسْمَعُ بِهِ، وَبَصَرَهُ الَّذِي يُبْصِرُ بِهِ، وَيَدَهُ الَّتِي يَبْطِشُ بِهَا، وَرِجْلَهُ الَّتِي يَمْشِي بِهَا، وَلَئِنْ سَأَلَنِي لَأُعْطِيَنَّهُ، وَلَئِنْ اسْتَعَاذَنِي لَأُعِيذَنَّهُ",
+        "مَنْ عَادَى لِي وَلِيًّا فَقَدْ آذَنْتُهُ بِالْحَرْبِ، وَمَا تَقَرَّبَ إلَيَّ عَبْدِي بِشَيْءٍ أَحَبَّ إلَيَّ مِمَّا افْتَرَضْتُهُ عَلَيْهِ، وَلَا يَزَالُ عَبْدِي يَتَقَرَّبُ إلَيَّ بِالنَّوَافِلِ حَتَّى أُحِبَّهُ، فَإِذَا أَحَبْتُهُ كُنْت سَمْعَهُ الَّذِي يَسْمَعُ بِهِ، وَبَصَرَهُ الَّذِي يُبْصِرُ بِهِ، وَيَدَهُ الَّتِي يَبْطِشُ بِهَا، وَرِجْلَهُ الَّتِي يَمْشِي بِهَا، وَلَئِنْ سَأَلَنِي لَأُعْطِيَنَّهُ، وَلَئِنْ اسْتَعَاذَنِي لَأُعِيذَنَّهُ",
       translation:
         "Whoever shows enmity to a friend of Mine, I have declared war against him. My servant does not draw near to Me with anything more beloved to Me than the religious duties I have imposed upon him. My servant continues to draw near to Me with voluntary acts of worship until I love him. When I love him, I am his hearing with which he hears, his sight with which he sees, his hand with which he strikes, and his foot with which he walks. Were he to ask of Me, I would surely give to him. Were he to seek refuge in Me, I would surely grant him refuge.",
     },
@@ -849,154 +1047,155 @@ export default function AzkarApp() {
   ]
 
   // Quran Data - Sample surahs (organized by length - shortest to longest)
-  const quranData = [
-    {
-      number: 108,
-      name: "الكوثر",
-      verses: [
-        { number: 1, arabic: "إِنَّا أَعْطَيْنَاكَ الْكَوْثَرَ", english: "Indeed, We have granted you al-Kawthar." },
-        { number: 2, arabic: "فَصَلِّ لِرَبِّكَ وَانْحَرْ", english: "So pray to your Lord and sacrifice [to Him alone]." },
-        { number: 3, arabic: "إِنَّ شَانِئَكَ هُوَ الْأَبْتَرُ", english: "Indeed, your enemy is the one cut off." },
-      ],
-    },
-    {
-      number: 103,
-      name: "العصر",
-      verses: [
-        { number: 1, arabic: "وَالْعَصْرِ", english: "By time," },
-        { number: 2, arabic: "إِنَّ الْإِنسَانَ لَ فِي خُسْرٍ", english: "Indeed, mankind is in loss," },
-        {
-          number: 3,
-          arabic: "إِلَّا الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ وَتَوَاصَوْا بِالْحَقِّ وَتَوَاصَوْا بِالصَّبْرِ",
-          english:
-            "Except for those who have believed and done righteous deeds and advised each other to truth and advised each other to patience.",
-        },
-      ],
-    },
-    {
-      number: 112,
-      name: "الإخلاص",
-      verses: [
-        { number: 1, arabic: "قُلْ هُوَ اللَّهُ أَحَدٌ", english: "Say, He is Allah, [who is] One," },
-        { number: 2, arabic: "اللَّهُ الصَّمَدُ", english: "Allah, the Eternal Refuge." },
-        { number: 3, arabic: "لَمْ يَلِدْ وَلَمْ يُولَدْ", english: "He neither begets nor is born," },
-        { number: 4, arabic: "وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ", english: "Nor is there to Him any equivalent." },
-      ],
-    },
-    {
-      number: 113,
-      name: "الفلق",
-      verses: [
-        { number: 1, arabic: "قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ", english: "Say, I seek refuge in the Lord of daybreak" },
-        { number: 2, arabic: "مِن شَرِّ مَا خَلَقَ", english: "From the evil of that which He created" },
-        { number: 3, arabic: "وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ", english: "And from the evil of darkness when it settles" },
-        { number: 4, arabic: "وَمِن شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِ", english: "And from the evil of the blowers in knots" },
-        { number: 5, arabic: "وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ", english: "And from the evil of an envier when he envies." },
-      ],
-    },
-    {
-      number: 114,
-      name: "الناس",
-      verses: [
-        { number: 1, arabic: "قُلْ أَعُوذُ بِرَبِّ النَّاسِ", english: "Say, I seek refuge in the Lord of mankind," },
-        { number: 2, arabic: "مَلِكِ النَّاسِ", english: "The Sovereign of mankind." },
-        { number: 3, arabic: "إِلَٰهِ النَّاسِ", english: "The God of mankind," },
-        { number: 4, arabic: "مِن شَرِّ الْوَسْوَاسِ الْخَنَّاسِ", english: "From the evil of the retreating whisperer" },
-        { number: 5, arabic: "الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ", english: "Who whispers [evil] into the breasts of mankind" },
-        { number: 6, arabic: "مِنَ الْجِنَّةِ وَالنَّاسِ", english: "From among the jinn and mankind." },
-      ],
-    },
-    {
-      number: 1,
-      name: "الفاتحة",
-      verses: [
-        {
-          number: 1,
-          arabic: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
-          english: "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
-        },
-        { number: 2, arabic: "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ", english: "All praise is due to Allah, Lord of the worlds" },
-        { number: 3, arabic: "الرَّحْمَٰنِ الرَّحِيمِ", english: "The Entirely Merciful, the Especially Merciful," },
-        { number: 4, arabic: "مَالِكِ يَوْمِ الدِّينِ", english: "Sovereign of the Day of Recompense." },
-        { number: 5, arabic: "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ", english: "It is You we worship and You we ask for help." },
-        { number: 6, arabic: "اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ", english: "Guide us to the straight path" },
-        {
-          number: 7,
-          arabic: "صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ",
-          english:
-            "The path of those upon whom You have bestowed favor, not of those who have evoked [Your] anger or of those who are astray.",
-        },
-      ],
-    },
-    {
-      number: 93,
-      name: "الضحى",
-      verses: [
-        { number: 1, arabic: "وَالضُّحَىٰ", english: "By the morning brightness" },
-        { number: 2, arabic: "وَاللَّيْلِ إِذَا سَجَىٰ", english: "And [by] the night when it covers with darkness," },
-        {
-          number: 3,
-          arabic: "مَا وَدَّعَكَ رَبُّكَ وَمَا قَلَىٰ",
-          english: "Your Lord has not taken leave of you, nor has He detested [you].",
-        },
-        {
-          number: 4,
-          arabic: "وَلَلْآخِرَةُ خَيْرٌ لَّكَ مِنَ الْأُولَىٰ",
-          english: "And the Hereafter is better for you than the first [life].",
-        },
-        {
-          number: 5,
-          arabic: "وَلَسَوْفَ يُعْطِيكَ رَبُّكَ فَتَرْضَىٰ",
-          english: "And your Lord is going to give you, and you will be satisfied.",
-        },
-        { number: 6, arabic: "أَلَمْ يَجِدْكَ يَتِيمًا فَآوَىٰ", english: "Did He not find you an orphan and give [you] refuge?" },
-        { number: 7, arabic: "وَوَجَدَكَ ضَالًّا فَهَدَىٰ", english: "And He found you lost and guided [you]," },
-        { number: 8, arabic: "وَوَجَدَكَ عَائِلًا فَأَغْنَىٰ", english: "And He found you poor and made [you] self-sufficient." },
-        { number: 9, arabic: "فَأَمَّا الْيَتِيمَ فَلَا تَقْهَرْ", english: "So as for the orphan, do not oppress [him]." },
-        { number: 10, arabic: "وَأَمَّا السَّائِلَ فَلَا تَنْهَرْ", english: "And as for the petitioner, do not repel [him]." },
-        { number: 11, arabic: "وَأَمَّا بِنِعْمَةِ رَبِّكَ فَحَدِّثْ", english: "But as for the favor of your Lord, report [it]." },
-      ],
-    },
-    {
-      number: 18,
-      name: "الكهف",
-      hasSpecialReminder: true,
-      verses: [
-        {
-          number: 1,
-          arabic: "الْحَمْدُ لِلَّهِ الَّذِي أَنزَلَ عَلَىٰ عَبْدِهِ الْكِتَابَ وَلَمْ يَجْعَل لَّهُ عِوَجًا",
-          english:
-            "All praise is due to Allah, who has sent down upon His Servant the Book and has not made therein any deviance.",
-        },
-        {
-          number: 2,
-          arabic: "قَيِّمًا لِّيُنذِرَ بَأْسًا شَدِيدًا مِّن لَّدُنْهُ وَيُبَشِّرَ الْمُؤْمِنِينَ الَّذِينَ يَعْمَلُونَ الصَّالِحَاتِ أَنَّ لَهُمْ أَجْرًا حَسَنًا",
-          english:
-            "[He has made it] straight, to warn of severe punishment from Him and to give good tidings to the believers who do righteous deeds that they will have a good reward.",
-        },
-        { number: 3, arabic: "مَّاكِثِينَ فِيهِ أَبَدًا", english: "In which they will remain forever" },
-      ],
-    },
-    {
-      number: 2,
-      name: "البقرة",
-      verses: [
-        {
-          number: 255,
-          arabic:
-            "اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ ۚ لَا تَأْخُذُهُ سِنَةٌ وَلَا نَوْمٌ ۚ لَّهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ ۗ مَن ذَا الَّذِي يَشْفَعُ عِنْدَهُ إِلَّا بِإِذْنِهِ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَيْءٍ مِّنْ عِلْمِهِ إِلَّا بِمَا شَاءَ ۚ وَسِعَ كُرْسِيُّهُ السَّمَاوَاتِ وَالْأَرْضَ ۖ وَلَا يَئُودُهُ حِفْظُهُمَا ۚ وَهُوَ الْعَلِيُّ الْعَظِيمُ",
-          english:
-            "Allah - there is no deity except Him, the Ever-Living, the Sustainer of existence. Neither drowsiness overtakes Him nor sleep. To Him belongs whatever is in the heavens and whatever is on the earth. Who is it that can intercede with Him except by His permission? He knows what is before them and what will be after them, and they encompass not a thing of His knowledge except for what He wills. His Kursi extends over the heavens and the earth, and their preservation tires Him not. And He is the Most High, the Most Great.",
-          isSpecial: true,
-          specialName: "آية الكرسي",
-        },
-      ],
-    },
-  ]
+  // Replaced with fetched data from API
+  // const quranData = [
+  //   {
+  //     number: 108,
+  //     name: "الكوثر",
+  //     verses: [
+  //       { number: 1, arabic: "إِنَّا أَعْطَيْنَاكَ الْكَوْثَرَ", english: "Indeed, We have granted you al-Kawthar." },
+  //       { number: 2, arabic: "فَصَلِّ لِرَبِّكَ وَانْحَرْ", english: "So pray to your Lord and sacrifice [to Him alone]." },
+  //       { number: 3, arabic: "إِنَّ شَانِئَكَ هُوَ الْأَبْتَرُ", english: "Indeed, your enemy is the one cut off." },
+  //     ],
+  //   },
+  //   {
+  //     number: 103,
+  //     name: "العصر",
+  //     verses: [
+  //       { number: 1, arabic: "وَالْعَصْرِ", english: "By time," },
+  //       { number: 2, arabic: "إِنَّ الْإِنسَانَ لَ فِي خُسْرٍ", english: "Indeed, mankind is in loss," },
+  //       {
+  //         number: 3,
+  //         arabic: "إِلَّا الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ وَتَوَاصَوْا بِالْحَقِّ وَتَوَاصَوْا بِالصَّبْرِ",
+  //         english:
+  //           "Except for those who have believed and done righteous deeds and advised each other to truth and advised each other to patience.",
+  //       },
+  //     ],
+  //   },
+  //   {
+  //     number: 112,
+  //     name: "الإخلاص",
+  //     verses: [
+  //       { number: 1, arabic: "قُلْ هُوَ اللَّهُ أَحَدٌ", english: "Say, He is Allah, [who is] One," },
+  //       { number: 2, arabic: "اللَّهُ الصَّمَدُ", english: "Allah, the Eternal Refuge." },
+  //       { number: 3, arabic: "لَمْ يَلِدْ وَلَمْ يُولَدْ", english: "He neither begets nor is born," },
+  //       { number: 4, arabic: "وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ", english: "Nor is there to Him any equivalent." },
+  //     ],
+  //   },
+  //   {
+  //     number: 113,
+  //     name: "الفلق",
+  //     verses: [
+  //       { number: 1, arabic: "قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ", english: "Say, I seek refuge in the Lord of daybreak" },
+  //       { number: 2, arabic: "مِن شَرِّ مَا خَلَقَ", english: "From the evil of that which He created" },
+  //       { number: 3, arabic: "وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ", english: "And from the evil of darkness when it settles" },
+  //       { number: 4, arabic: "وَمِن شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِ", english: "And from the evil of the blowers in knots" },
+  //       { number: 5, arabic: "وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ", english: "And from the evil of an envier when he envies." },
+  //     ],
+  //   },
+  //   {
+  //     number: 114,
+  //     name: "الناس",
+  //     verses: [
+  //       { number: 1, arabic: "قُلْ أَعُوذُ بِرَبِّ النَّاسِ", english: "Say, I seek refuge in the Lord of mankind," },
+  //       { number: 2, arabic: "مَلِكِ النَّاسِ", english: "The Sovereign of mankind." },
+  //       { number: 3, arabic: "إِلَٰهِ النَّاسِ", english: "The God of mankind," },
+  //       { number: 4, arabic: "مِن شَرِّ الْوَسْوَاسِ الْخَنَّاسِ", english: "From the evil of the retreating whisperer" },
+  //       { number: 5, arabic: "الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ", english: "Who whispers [evil] into the breasts of mankind" },
+  //       { number: 6, arabic: "مِنَ الْجِنَّةِ وَالنَّاسِ", english: "From among the jinn and mankind." },
+  //     ],
+  //   },
+  //   {
+  //     number: 1,
+  //     name: "الفاتحة",
+  //     verses: [
+  //       {
+  //         number: 1,
+  //         arabic: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+  //         english: "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
+  //       },
+  //       { number: 2, arabic: "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ", english: "All praise is due to Allah, Lord of the worlds" },
+  //       { number: 3, arabic: "الرَّحْمَٰنِ الرَّحِيمِ", english: "The Entirely Merciful, the Especially Merciful," },
+  //       { number: 4, arabic: "مَالِكِ يَوْمِ الدِّينِ", english: "Sovereign of the Day of Recompense." },
+  //       { number: 5, arabic: "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ", english: "It is You we worship and You we ask for help." },
+  //       { number: 6, arabic: "اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ", english: "Guide us to the straight path" },
+  //       {
+  //         number: 7,
+  //         arabic: "صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ",
+  //         english:
+  //           "The path of those upon whom You have bestowed favor, not of those who have evoked [Your] anger or of those who are astray.",
+  //       },
+  //     ],
+  //   },
+  //   {
+  //     number: 93,
+  //     name: "الضحى",
+  //     verses: [
+  //       { number: 1, arabic: "وَالضُّحَىٰ", english: "By the morning brightness" },
+  //       { number: 2, arabic: "وَاللَّيْلِ إِذَا سَجَىٰ", english: "And [by] the night when it covers with darkness," },
+  //       {
+  //         number: 3,
+  //         arabic: "مَا وَدَّعَكَ رَبُّكَ وَمَا قَلَىٰ",
+  //         english: "Your Lord has not taken leave of you, nor has He detested [you].",
+  //       },
+  //       {
+  //         number: 4,
+  //         arabic: "وَلَسَوْفَ يُعْطِيكَ رَبُّكَ فَتَرْضَىٰ",
+  //         english: "And the Hereafter is better for you than the first [life].",
+  //       },
+  //       {
+  //         number: 5,
+  //         arabic: "وَلَسَوْفَ يُعْطِيكَ رَبُّكَ فَتَرْضَىٰ",
+  //         english: "And your Lord is going to give you, and you will be satisfied.",
+  //       },
+  //       { number: 6, arabic: "أَلَمْ يَجِدْكَ يَتِيمًا فَآوَىٰ", english: "Did He not find you an orphan and give [you] refuge?" },
+  //       { number: 7, arabic: "وَوَجَدَكَ ضَالًّا فَهَدَىٰ", english: "And He found you lost and guided [you]," },
+  //       { number: 8, arabic: "وَوَجَدَكَ عَائِلًا فَأَغْنَىٰ", english: "And He found you poor and made [you] self-sufficient." },
+  //       { number: 9, arabic: "فَأَمَّا الْيَتِيمَ فَلَا تَقْهَرْ", english: "So as for the orphan, do not oppress [him]." },
+  //       { number: 10, arabic: "وَأَمَّا السَّائِلَ فَلَا تَنْهَرْ", english: "And as for the petitioner, do not repel [him]." },
+  //       { number: 11, arabic: "وَأَمَّا بِنِعْمَةِ رَبِّكَ فَحَدِّثْ", english: "But as for the favor of your Lord, report [it]." },
+  //     ],
+  //   },
+  //   {
+  //     number: 18,
+  //     name: "الكهف",
+  //     hasSpecialReminder: true,
+  //     verses: [
+  //       {
+  //         number: 1,
+  //         arabic: "الْحَمْدُ لِلَّهِ الَّذِي أَنزَلَ عَلَىٰ عَبْدِهِ الْكِتَابَ وَلَمْ يَجْعَل لَّهُ عِوَجًا",
+  //         english:
+  //           "All praise is due to Allah, who has sent down upon His Servant the Book and has not made therein any deviance.",
+  //       },
+  //       {
+  //         number: 2,
+  //         arabic: "قَيِّمًا لِّيُنذِرَ بَأْسًا شَدِيدًا مِّن لَّدُنْهُ وَيُبَشِّرَ الْمُؤْمِنِينَ الَّذِينَ يَعْمَلُونَ الصَّالِحَاتِ أَنَّ لَهُمْ أَجْرًا حَسَنًا",
+  //         english:
+  //           "[He has made it] straight, to warn of severe punishment from Him and to give good tidings to the believers who do righteous deeds that they will have a good reward.",
+  //       },
+  //       { number: 3, arabic: "مَّاكِثِينَ فِيهِ أَبَدًا", english: "In which they will remain forever" },
+  //     ],
+  //   },
+  //   {
+  //     number: 2,
+  //     name: "البقرة",
+  //     verses: [
+  //       {
+  //         number: 255,
+  //         arabic:
+  //           "اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ ۚ لَا تَأْخُذُهُ سِنَةٌ وَلَا نَوْمٌ ۚ لَّهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ ۗ مَن ذَا الَّذِي يَشْفَعُ عِنْدَهُ إِلَّا بِإِذْنِهِ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَيْءٍ مِّنْ عِلْمِهِ إِلَّا بِمَا شَاءَ ۚ وَسِعَ كُرْسِيُّهُ السَّمَاوَاتِ وَالْأَرْضَ ۖ وَلَا يَئُودُهُ حِفْظُهُمَا ۚ وَهُوَ الْعَلِيُّ الْعَظِيمُ",
+  //         english:
+  //           "Allah - there is no deity except Him, the Ever-Living, the Sustainer of existence. Neither drowsiness overtakes Him nor sleep. To Him belongs whatever is in the heavens and whatever is on the earth. Who is it that can intercede with Him except by His permission? He knows what is before them and what will be after them, and they encompass not a thing of His knowledge except for what He wills. His Kursi extends over the heavens and the earth, and their preservation tires Him not. And He is the Most High, the Most Great.",
+  //         isSpecial: true,
+  //         specialName: "آية الكرسي",
+  //       },
+  //     ],
+  //   },
+  // ]
 
   const currentCategory = azkarData[selectedCategory as keyof typeof azkarData]
 
-  const CategoryIcon = mainTab === "duaa" ? currentCategory.icon : mainTab === "quran" ? BookMarked : BookOpen
+  const CategoryIcon = mainTab === "duaa" ? currentCategory.icon : mainTab === "hadith" ? BookOpen : BookMarked
 
   const handleIncrement = (dhikrId: string, maxCount: number, currentIndex: number) => {
     setCounts((prev) => {
@@ -1084,7 +1283,7 @@ export default function AzkarApp() {
     }
   }
 
-  const openSurah = (surah: any) => {
+  const openSurah = (surah: QuranSurah) => {
     // Clear previous refs before opening new surah
     ayahRefs.current = {}
     setSelectedSurah(surah)
@@ -1149,7 +1348,11 @@ export default function AzkarApp() {
       >
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center gap-3 mb-2">
-            <CategoryIcon className="w-8 h-8" />
+            {/* <CategoryIcon className="w-8 h-8" /> */}
+            {/* Conditionally render icon based on mainTab */}
+            {mainTab === "duaa" && <currentCategory.icon className="w-8 h-8" />}
+            {mainTab === "hadith" && <BookOpen className="w-8 h-8" />}
+            {mainTab === "quran" && <BookMarked className="w-8 h-8" />}
             <h1 className="text-3xl font-bold">Mariam Guide</h1>
           </div>
           <p className="text-white/90">
@@ -1376,226 +1579,272 @@ export default function AzkarApp() {
       {/* Quran Section */}
       {mainTab === "quran" && (
         <div className="max-w-4xl mx-auto p-4 pb-8">
-          {/* LIST VIEW */}
-          {quranView === "list" && (
-            <>
-              {/* Friday Reminder for Al-Kahf */}
-              {isFriday() && (
-                <div className="mb-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">🕌</span>
-                    <div>
-                      <p className="font-semibold text-amber-900">It&apos;s Friday!</p>
-                      <p className="text-sm text-amber-800">It's recommended to recite Surah Al-Kahf today</p>
-                    </div>
-                  </div>
+          {isLoadingQuran && (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 className="w-12 h-12 text-purple-500 animate-spin mb-4" />
+              <p className="text-gray-600 font-medium">Loading Quran data...</p>
+              <p className="text-sm text-gray-500 mt-2">Fetching all 114 surahs with translations</p>
+
+              {/* Progress bar */}
+              <div className="w-64 mt-4">
+                <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 transition-all duration-300"
+                    style={{ width: `${loadingProgress}%` }}
+                  />
                 </div>
-              )}
-
-              {/* Bookmark Continue Reading */}
-              {quranBookmark.surahNumber && (
-                <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-purple-900">Continue Reading</p>
-                      <p className="text-sm text-purple-700">
-                        {quranData.find((s) => s.number === quranBookmark.surahNumber)?.name} - Ayah{" "}
-                        {quranBookmark.ayahNumber}
-                      </p>
-                    </div>
-                    <button
-                      onClick={continueReading}
-                      className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg font-medium hover:shadow-lg transition-all"
-                    >
-                      Continue
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Surahs List */}
-              <div className="space-y-3">
-                {quranData.map((surah) => {
-                  const isKahf = surah.number === 18
-                  const hasBookmark = quranBookmark.surahNumber === surah.number
-
-                  return (
-                    <button
-                      key={surah.number}
-                      onClick={() => openSurah(surah)}
-                      className={`w-full bg-white rounded-xl shadow-md p-5 hover:shadow-lg transition-all text-left ${
-                        isKahf && isFriday() ? "ring-2 ring-amber-400" : ""
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-lg flex items-center justify-center font-bold text-lg">
-                            {surah.number}
-                          </div>
-                          <div className="text-right">
-                            <h3 className="text-xl font-bold text-gray-800">{surah.name}</h3>
-                            <p className="text-sm text-gray-500">{surah.verses.length} verses</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {hasBookmark && <span className="text-purple-500 text-sm font-semibold">🔖</span>}
-                          {isKahf && isFriday() && <span className="text-amber-500 text-sm">🕌</span>}
-                          <span className="text-gray-400 text-xl">→</span>
-                        </div>
-                      </div>
-                    </button>
-                  )
-                })}
+                <p className="text-center text-sm text-gray-600 mt-2">{loadingProgress}%</p>
               </div>
-
-              {/* Footer Note */}
-              <div className="mt-8 p-4 bg-purple-50 rounded-lg">
-                <p className="text-sm text-purple-800 text-center">
-                  📖 Sample surahs included. For complete Quran, integrate with Quran API
-                </p>
-              </div>
-            </>
+            </div>
           )}
 
-          {/* READING VIEW */}
-          {quranView === "reading" && selectedSurah && (
-            <>
-              {/* Back Button & Surah Header */}
-              <div className="mb-4 sticky top-0 bg-gradient-to-br from-slate-50 to-slate-100 z-10 pb-4">
-                <button
-                  onClick={backToSurahList}
-                  className="mb-3 flex items-center gap-2 text-purple-600 hover:text-purple-700 font-medium"
-                >
-                  <span className="text-xl">←</span>
-                  <span>Back to Surahs</span>
-                </button>
-
-                <div className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white p-5 rounded-xl shadow-lg">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center font-bold text-xl">
-                      {selectedSurah.number}
-                    </div>
-                    <div className="text-right flex-1">
-                      <h2 className="text-2xl font-bold">{selectedSurah.name}</h2>
-                      <p className="text-white/90 text-sm">{selectedSurah.verses.length} verses</p>
-                    </div>
-                  </div>
+          {quranError && (
+            <div className="p-6 bg-red-50 border-2 border-red-200 rounded-xl">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-red-900 mb-1">Failed to load Quran data</p>
+                  <p className="text-sm text-red-700">{quranError}</p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="mt-3 px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors"
+                  >
+                    Retry
+                  </button>
                 </div>
               </div>
+            </div>
+          )}
 
-              {/* Verses */}
-              <div className="space-y-6">
-                {selectedSurah.verses.map((verse: any, index: number) => {
-                  const isBookmarked =
-                    quranBookmark.surahNumber === selectedSurah.number && quranBookmark.ayahNumber === verse.number
-                  const isAyatAlKursi = verse.isSpecial
-                  const ayahKey = `${selectedSurah.number}-${index}`
-
-                  return (
-                    <div
-                      key={verse.number}
-                      ref={(el) => {
-                        if (el) ayahRefs.current[ayahKey] = el
-                      }}
-                      onClick={() => handleAyahClick(index)}
-                      className={`p-5 rounded-xl transition-all cursor-pointer ${
-                        isAyatAlKursi
-                          ? "bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-300 hover:border-amber-400"
-                          : isBookmarked
-                            ? "bg-purple-50 border-2 border-purple-300 hover:border-purple-400"
-                            : "bg-white shadow-md hover:shadow-lg hover:scale-[1.01]"
-                      }`}
-                    >
-                      {/* Special Badge for Ayat al-Kursi */}
-                      {isAyatAlKursi && (
-                        <div className="mb-3 flex items-center gap-2">
-                          <span className="px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full">
-                            ⭐ {verse.specialName}
-                          </span>
+          {!isLoadingQuran && !quranError && quranData.length > 0 && (
+            <>
+              {/* LIST VIEW */}
+              {quranView === "list" && (
+                <>
+                  {/* Friday Reminder for Al-Kahf */}
+                  {isFriday() && (
+                    <div className="mb-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">🕌</span>
+                        <div>
+                          <p className="font-semibold text-amber-900">It&apos;s Friday!</p>
+                          <p className="text-sm text-amber-800">It's recommended to recite Surah Al-Kahf today</p>
                         </div>
-                      )}
+                      </div>
+                    </div>
+                  )}
 
-                      {/* Ayah Number */}
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-sm font-semibold text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
-                          Ayah {verse.number}
-                        </span>
+                  {/* Bookmark Continue Reading */}
+                  {quranBookmark.surahNumber && (
+                    <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-violet-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-semibold text-purple-900">Continue Reading</p>
+                          <p className="text-sm text-purple-700">
+                            {quranData.find((s) => s.number === quranBookmark.surahNumber)?.name} - Ayah{" "}
+                            {quranBookmark.ayahNumber}
+                          </p>
+                        </div>
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setBookmark(selectedSurah.number, verse.number)
-                          }}
-                          className={`text-sm px-3 py-1 rounded-full transition-all ${
-                            isBookmarked ? "bg-purple-500 text-white" : "bg-gray-200 text-gray-600 hover:bg-gray-300"
-                          }`}
+                          onClick={continueReading}
+                          className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg font-medium hover:shadow-lg transition-all"
                         >
-                          {isBookmarked ? "🔖 Bookmarked" : "Bookmark"}
+                          Continue
                         </button>
                       </div>
-
-                      {/* Arabic Text */}
-                      <div className="text-right mb-4">
-                        <p className={`leading-loose text-gray-800 ${isAyatAlKursi ? "text-2xl" : "text-xl"}`}>
-                          {verse.arabic}
-                        </p>
-                      </div>
-
-                      {/* English Translation */}
-                      <div className="pt-4 border-t border-gray-200">
-                        <p className="text-sm text-gray-700 leading-relaxed">{verse.english}</p>
-                      </div>
                     </div>
-                  )
-                })}
-              </div>
+                  )}
 
-              {/* Al-Kahf Friday Reminder */}
-              {selectedSurah.number === 18 && isFriday() && (
-                <div className="mt-6 p-4 bg-amber-100 rounded-lg">
-                  <p className="text-sm text-amber-900 text-center">
-                    ✨ Reciting Surah Al-Kahf on Friday brings light between the two Fridays
-                  </p>
-                </div>
+                  {/* Surahs List */}
+                  <div className="space-y-3">
+                    {quranData.map((surah) => {
+                      const isKahf = surah.number === 18
+                      const hasBookmark = quranBookmark.surahNumber === surah.number
+
+                      return (
+                        <button
+                          key={surah.number}
+                          onClick={() => openSurah(surah)}
+                          className={`w-full bg-white rounded-xl shadow-md p-5 hover:shadow-lg transition-all text-left ${
+                            isKahf && isFriday() ? "ring-2 ring-amber-400" : ""
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-lg flex items-center justify-center font-bold text-lg">
+                                {surah.number}
+                              </div>
+                              <div className="text-right">
+                                <h3 className="text-xl font-bold text-gray-800">{surah.name}</h3>
+                                <p className="text-sm text-gray-500 text-left leading-3 py-0 pt-2">
+                                  {surah.verses.length} verses
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {hasBookmark && <span className="text-purple-500 font-semibold text-3xl">🔖</span>}
+                              {isKahf && isFriday() && <span className="text-amber-500 text-sm">🕌</span>}
+                              <span className="text-gray-400 text-xl">→</span>
+                            </div>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  <div className="mt-8 p-4 bg-purple-50 rounded-lg">
+                    <p className="text-sm text-purple-800 text-center">
+                      📖 Complete Quran with all 114 surahs and English translations
+                    </p>
+                  </div>
+                </>
               )}
 
-              {/* Navigation Buttons */}
-              <div className="mt-8">
-                {/* Previous/List/Next Navigation */}
-                <div className="flex items-stretch justify-between gap-3">
-                  <button
-                    onClick={goToPreviousSurah}
-                    disabled={quranData.findIndex((s) => s.number === selectedSurah.number) === 0}
-                    className={`flex-1 h-12 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                      quranData.findIndex((s) => s.number === selectedSurah.number) === 0
-                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                        : "bg-white text-purple-600 border-2 border-purple-500 hover:bg-purple-50 hover:shadow-lg"
-                    }`}
-                  >
-                    <span className="text-xl">←</span>
-                    <span>Previous</span>
-                  </button>
+              {/* READING VIEW */}
+              {quranView === "reading" && selectedSurah && (
+                <>
+                  {/* Back Button & Surah Header */}
+                  <div className="mb-4 sticky top-0 bg-gradient-to-br from-slate-50 to-slate-100 z-10 pb-4">
+                    <button
+                      onClick={backToSurahList}
+                      className="mb-3 flex items-center gap-2 text-purple-600 hover:text-purple-700 font-medium"
+                    >
+                      <span className="text-xl">←</span>
+                      <span>Back to Surahs</span>
+                    </button>
 
-                  <button
-                    onClick={backToSurahList}
-                    className="h-12 px-6 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center"
-                  >
-                    <List className="w-5 h-5" />
-                  </button>
+                    <div className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white p-5 rounded-xl shadow-lg">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center font-bold text-xl">
+                          {selectedSurah.number}
+                        </div>
+                        <div className="text-right flex-1">
+                          <h2 className="text-2xl font-bold">{selectedSurah.name}</h2>
+                          <p className="text-white/90 text-sm">{selectedSurah.verses.length} verses</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-                  <button
-                    onClick={goToNextSurah}
-                    disabled={quranData.findIndex((s) => s.number === selectedSurah.number) === quranData.length - 1}
-                    className={`flex-1 h-12 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                      quranData.findIndex((s) => s.number === selectedSurah.number) === quranData.length - 1
-                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                        : "bg-white text-purple-600 border-2 border-purple-500 hover:bg-purple-50 hover:shadow-lg"
-                    }`}
-                  >
-                    <span>Next</span>
-                    <span className="text-xl">→</span>
-                  </button>
-                </div>
-              </div>
+                  {/* Verses */}
+                  <div className="space-y-6">
+                    {selectedSurah.verses.map((verse: QuranVerse, index: number) => {
+                      const isBookmarked =
+                        quranBookmark.surahNumber === selectedSurah.number && quranBookmark.ayahNumber === verse.number
+                      const isAyatAlKursi = verse.isSpecial
+                      const ayahKey = `${selectedSurah.number}-${index}`
+
+                      return (
+                        <div
+                          key={verse.number}
+                          ref={(el) => {
+                            if (el) ayahRefs.current[ayahKey] = el
+                          }}
+                          onClick={() => handleAyahClick(index)}
+                          className={`p-5 rounded-xl transition-all cursor-pointer ${
+                            isAyatAlKursi
+                              ? "bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-300 hover:border-amber-400"
+                              : isBookmarked
+                                ? "bg-purple-50 border-2 border-purple-300 hover:border-purple-400"
+                                : "bg-white shadow-md hover:shadow-lg hover:scale-[1.01]"
+                          }`}
+                        >
+                          {/* Special Badge for Ayat al-Kursi */}
+                          {isAyatAlKursi && (
+                            <div className="mb-3 flex items-center gap-2">
+                              <span className="px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full">
+                                ⭐ {verse.specialName}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Ayah Number */}
+                          <div className="flex items-center justify-between mb-4">
+                            <span className="text-sm font-semibold text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
+                              Ayah {verse.number}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setBookmark(selectedSurah.number, verse.number)
+                              }}
+                              className={`text-sm px-3 py-1 rounded-full transition-all ${
+                                isBookmarked
+                                  ? "bg-purple-500 text-white"
+                                  : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                              }`}
+                            >
+                              {isBookmarked ? "🔖 Bookmarked" : "Bookmark"}
+                            </button>
+                          </div>
+
+                          {/* Arabic Text */}
+                          <div className="text-right mb-4">
+                            <p className={`leading-loose text-gray-800 ${isAyatAlKursi ? "text-2xl" : "text-xl"}`}>
+                              {verse.arabic}
+                            </p>
+                          </div>
+
+                          {/* English Translation */}
+                          <div className="pt-4 border-t border-gray-200">
+                            <p className="text-sm text-gray-700 leading-relaxed">{verse.english}</p>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {/* Al-Kahf Friday Reminder */}
+                  {selectedSurah.number === 18 && isFriday() && (
+                    <div className="mt-6 p-4 bg-amber-100 rounded-lg">
+                      <p className="text-sm text-amber-900 text-center">
+                        ✨ Reciting Surah Al-Kahf on Friday brings light between the two Fridays
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Navigation Buttons */}
+                  <div className="mt-8">
+                    {/* Previous/List/Next Navigation */}
+                    <div className="flex items-stretch justify-between gap-3">
+                      <button
+                        onClick={goToPreviousSurah}
+                        disabled={quranData.findIndex((s) => s.number === selectedSurah.number) === 0}
+                        className={`flex-1 h-12 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                          quranData.findIndex((s) => s.number === selectedSurah.number) === 0
+                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            : "bg-white text-purple-600 border-2 border-purple-500 hover:bg-purple-50 hover:shadow-lg"
+                        }`}
+                      >
+                        <span className="text-xl">←</span>
+                        <span>Previous</span>
+                      </button>
+
+                      <button
+                        onClick={backToSurahList}
+                        className="h-12 px-6 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center"
+                      >
+                        <List className="w-5 h-5" />
+                      </button>
+
+                      <button
+                        onClick={goToNextSurah}
+                        disabled={
+                          quranData.findIndex((s) => s.number === selectedSurah.number) === quranData.length - 1
+                        }
+                        className={`flex-1 h-12 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                          quranData.findIndex((s) => s.number === selectedSurah.number) === quranData.length - 1
+                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                            : "bg-white text-purple-600 border-2 border-purple-500 hover:bg-purple-50 hover:shadow-lg"
+                        }`}
+                      >
+                        <span>Next</span>
+                        <span className="text-xl">→</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
