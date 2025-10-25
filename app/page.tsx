@@ -37,7 +37,7 @@ interface QuranSurah {
 }
 
 export default function AzkarApp() {
-  const [mainTab, setMainTab] = useState("duaa") // duaa, hadith, quran
+  const [mainTab, setMainTab] = useState("duaa")
   const [selectedCategory, setSelectedCategory] = useState("morning")
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [completedAzkar, setCompletedAzkar] = useState(new Set<string>())
@@ -57,7 +57,6 @@ export default function AzkarApp() {
   const ayahRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   useEffect(() => {
-    // Load Duaa counts
     const savedCounts = localStorage.getItem("mariam-guide-duaa-counts")
     if (savedCounts) {
       try {
@@ -67,7 +66,6 @@ export default function AzkarApp() {
       }
     }
 
-    // Load read Hadith
     const savedReadHadith = localStorage.getItem("mariam-guide-read-hadith")
     if (savedReadHadith) {
       try {
@@ -77,7 +75,6 @@ export default function AzkarApp() {
       }
     }
 
-    // Load Quran bookmark
     const savedBookmark = localStorage.getItem("mariam-guide-quran-bookmark")
     if (savedBookmark) {
       try {
@@ -100,7 +97,6 @@ export default function AzkarApp() {
     localStorage.setItem("mariam-guide-quran-bookmark", JSON.stringify(quranBookmark))
   }, [quranBookmark])
 
-  // Add custom scrollbar styling
   useEffect(() => {
     const style = document.createElement("style")
     style.textContent = `
@@ -116,12 +112,10 @@ export default function AzkarApp() {
     return () => document.head.removeChild(style)
   }, [])
 
-  // Clear refs when category changes
   useEffect(() => {
     dhikrRefs.current = {}
   }, [selectedCategory])
 
-  // Reset Quran view when switching tabs
   useEffect(() => {
     if (mainTab !== "quran") {
       setQuranView("list")
@@ -137,7 +131,6 @@ export default function AzkarApp() {
       try {
         console.log("[v0] Starting to fetch Quran data...")
 
-        // Fetch the list of all surahs first
         const surahListResponse = await fetch("https://api.alquran.cloud/v1/surah")
         if (!surahListResponse.ok) {
           throw new Error(`Failed to fetch surah list: ${surahListResponse.status}`)
@@ -156,7 +149,6 @@ export default function AzkarApp() {
               const response = await fetch(url)
               if (response.ok) return response
 
-              // If rate limited (429) or server error (5xx), retry
               if (response.status === 429 || response.status >= 500) {
                 console.log(`[v0] Retry ${i + 1}/${retries} for ${url} (status: ${response.status})`)
                 await new Promise((resolve) => setTimeout(resolve, delay * Math.pow(2, i)))
@@ -184,7 +176,6 @@ export default function AzkarApp() {
             const surahNumber = surahInfo.number
 
             try {
-              // Fetch Arabic text
               const arabicResponse = await fetchWithRetry(
                 `https://api.alquran.cloud/v1/surah/${surahNumber}/ar.alafasy`,
               )
@@ -192,11 +183,9 @@ export default function AzkarApp() {
 
               await new Promise((resolve) => setTimeout(resolve, 300))
 
-              // Fetch English translation
               const englishResponse = await fetchWithRetry(`https://api.alquran.cloud/v1/surah/${surahNumber}/en.asad`)
               const englishData = await englishResponse.json()
 
-              // Combine Arabic and English
               const verses: QuranVerse[] = arabicData.data.ayahs.map((ayah: any, index: number) => {
                 const verse: QuranVerse = {
                   number: ayah.numberInSurah,
@@ -204,7 +193,6 @@ export default function AzkarApp() {
                   english: englishData.data.ayahs[index].text,
                 }
 
-                // Mark Ayat al-Kursi (Surah 2, Ayah 255)
                 if (surahNumber === 2 && ayah.numberInSurah === 255) {
                   verse.isSpecial = true
                   verse.specialName = "آية الكرسي"
@@ -218,7 +206,7 @@ export default function AzkarApp() {
                 name: surahInfo.name,
                 englishName: surahInfo.englishName,
                 verses,
-                hasSpecialReminder: surahNumber === 18, // Al-Kahf
+                hasSpecialReminder: surahNumber === 18,
               }
 
               console.log(`[v0] Successfully fetched surah ${surahNumber}`)
@@ -234,7 +222,6 @@ export default function AzkarApp() {
           const batchResults = await Promise.all(batchPromises)
           allSurahs.push(...batchResults)
 
-          // Update progress
           const progress = Math.round((allSurahs.length / totalSurahs) * 100)
           setLoadingProgress(progress)
           console.log(`[v0] Progress: ${progress}% (${allSurahs.length}/${totalSurahs} surahs)`)
@@ -255,7 +242,6 @@ export default function AzkarApp() {
       }
     }
 
-    // Only fetch if we don't have data yet and we're on the quran tab
     if (quranData.length === 0 && mainTab === "quran") {
       fetchQuranData()
     }
@@ -1005,7 +991,7 @@ export default function AzkarApp() {
       arabic:
         "لَا تَحَاسَدُوا، وَلَا تَنَاجَشُوا، وَلَا تَبَاغَضُوا، وَلَا تَدَابَرُوا، وَلَا يَبِعْ بَعْضُكُمْ عَلَى بَيْعِ بَعْضٍ، وَكُونُوا عِبَادَ اللَّهِ إخْوَانًا، الْمُسْلِمُ أَخُو الْمُسْلِمِ لَا يَظْلِمُهُ وَلَا يَخْذُلُهُ وَلَا يَحْقِرُهُ، التَّقْوَى هَاهُنَا - وَيُشِيرُ إلَى صَدْرِهِ ثَلَاثَ مَرَّاتٍ - بِحَسْبِ امْرِئٍ مِنْ الشَّرِّ أَنْ يَحْقِرَ أَخَاهُ الْمُسْلِمَ، كُلُّ الْمُسْلِمِ عَلَى الْمُسْلِمِ حَرَامٌ دَمُهُ وَمَالُهُ وَعِرْضُهُ",
       translation:
-        "Do not envy one another, do not artificially inflate prices, do not hate one another, do not turn away from one another, and do not undercut one another in trade. Be servants of Allah as brothers. A Muslim is the brother of a Muslim. He does not wrong him, nor does he forsake him, nor does he lie to him, nor does he hold him in contempt. Taqwa (piety) is here - and he pointed to his chest three times. It is evil enough for a man to hold his brother Muslim in contempt. All of a Muslim is inviolable to another Muslim: his blood, his<bos>, and his honor.",
+        "Do not envy one another, do not artificially inflate prices, do not hate one another, do not turn away from one another, and do not undercut one another in trade. Be servants of Allah as brothers. A Muslim is the brother of a Muslim. He does not wrong him, nor does he forsake him, nor does he lie to him, nor does he hold him in contempt. Taqwa (piety) is here - and he pointed to his chest three times. It is evil enough for a man to hold his brother Muslim in contempt. All of a Muslim is inviolable to another Muslim: his blood, his property, and his honor.",
     },
     {
       id: "h36",
@@ -1046,153 +1032,6 @@ export default function AzkarApp() {
     },
   ]
 
-  // Quran Data - Sample surahs (organized by length - shortest to longest)
-  // Replaced with fetched data from API
-  // const quranData = [
-  //   {
-  //     number: 108,
-  //     name: "الكوثر",
-  //     verses: [
-  //       { number: 1, arabic: "إِنَّا أَعْطَيْنَاكَ الْكَوْثَرَ", english: "Indeed, We have granted you al-Kawthar." },
-  //       { number: 2, arabic: "فَصَلِّ لِرَبِّكَ وَانْحَرْ", english: "So pray to your Lord and sacrifice [to Him alone]." },
-  //       { number: 3, arabic: "إِنَّ شَانِئَكَ هُوَ الْأَبْتَرُ", english: "Indeed, your enemy is the one cut off." },
-  //     ],
-  //   },
-  //   {
-  //     number: 103,
-  //     name: "العصر",
-  //     verses: [
-  //       { number: 1, arabic: "وَالْعَصْرِ", english: "By time," },
-  //       { number: 2, arabic: "إِنَّ الْإِنسَانَ لَ فِي خُسْرٍ", english: "Indeed, mankind is in loss," },
-  //       {
-  //         number: 3,
-  //         arabic: "إِلَّا الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ وَتَوَاصَوْا بِالْحَقِّ وَتَوَاصَوْا بِالصَّبْرِ",
-  //         english:
-  //           "Except for those who have believed and done righteous deeds and advised each other to truth and advised each other to patience.",
-  //       },
-  //     ],
-  //   },
-  //   {
-  //     number: 112,
-  //     name: "الإخلاص",
-  //     verses: [
-  //       { number: 1, arabic: "قُلْ هُوَ اللَّهُ أَحَدٌ", english: "Say, He is Allah, [who is] One," },
-  //       { number: 2, arabic: "اللَّهُ الصَّمَدُ", english: "Allah, the Eternal Refuge." },
-  //       { number: 3, arabic: "لَمْ يَلِدْ وَلَمْ يُولَدْ", english: "He neither begets nor is born," },
-  //       { number: 4, arabic: "وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ", english: "Nor is there to Him any equivalent." },
-  //     ],
-  //   },
-  //   {
-  //     number: 113,
-  //     name: "الفلق",
-  //     verses: [
-  //       { number: 1, arabic: "قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ", english: "Say, I seek refuge in the Lord of daybreak" },
-  //       { number: 2, arabic: "مِن شَرِّ مَا خَلَقَ", english: "From the evil of that which He created" },
-  //       { number: 3, arabic: "وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ", english: "And from the evil of darkness when it settles" },
-  //       { number: 4, arabic: "وَمِن شَرِّ النَّفَّاثَاتِ فِي الْعُقَدِ", english: "And from the evil of the blowers in knots" },
-  //       { number: 5, arabic: "وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ", english: "And from the evil of an envier when he envies." },
-  //     ],
-  //   },
-  //   {
-  //     number: 114,
-  //     name: "الناس",
-  //     verses: [
-  //       { number: 1, arabic: "قُلْ أَعُوذُ بِرَبِّ النَّاسِ", english: "Say, I seek refuge in the Lord of mankind," },
-  //       { number: 2, arabic: "مَلِكِ النَّاسِ", english: "The Sovereign of mankind." },
-  //       { number: 3, arabic: "إِلَٰهِ النَّاسِ", english: "The God of mankind," },
-  //       { number: 4, arabic: "مِن شَرِّ الْوَسْوَاسِ الْخَنَّاسِ", english: "From the evil of the retreating whisperer" },
-  //       { number: 5, arabic: "الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ", english: "Who whispers [evil] into the breasts of mankind" },
-  //       { number: 6, arabic: "مِنَ الْجِنَّةِ وَالنَّاسِ", english: "From among the jinn and mankind." },
-  //     ],
-  //   },
-  //   {
-  //     number: 1,
-  //     name: "الفاتحة",
-  //     verses: [
-  //       {
-  //         number: 1,
-  //         arabic: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
-  //         english: "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
-  //       },
-  //       { number: 2, arabic: "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ", english: "All praise is due to Allah, Lord of the worlds" },
-  //       { number: 3, arabic: "الرَّحْمَٰنِ الرَّحِيمِ", english: "The Entirely Merciful, the Especially Merciful," },
-  //       { number: 4, arabic: "مَالِكِ يَوْمِ الدِّينِ", english: "Sovereign of the Day of Recompense." },
-  //       { number: 5, arabic: "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ", english: "It is You we worship and You we ask for help." },
-  //       { number: 6, arabic: "اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ", english: "Guide us to the straight path" },
-  //       {
-  //         number: 7,
-  //         arabic: "صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ",
-  //         english:
-  //           "The path of those upon whom You have bestowed favor, not of those who have evoked [Your] anger or of those who are astray.",
-  //       },
-  //     ],
-  //   },
-  //   {
-  //     number: 93,
-  //     name: "الضحى",
-  //     verses: [
-  //       { number: 1, arabic: "وَالضُّحَىٰ", english: "By the morning brightness" },
-  //       { number: 2, arabic: "وَاللَّيْلِ إِذَا سَجَىٰ", english: "And [by] the night when it covers with darkness," },
-  //       {
-  //         number: 3,
-  //         arabic: "مَا وَدَّعَكَ رَبُّكَ وَمَا قَلَىٰ",
-  //         english: "Your Lord has not taken leave of you, nor has He detested [you].",
-  //       },
-  //       {
-  //         number: 4,
-  //         arabic: "وَلَسَوْفَ يُعْطِيكَ رَبُّكَ فَتَرْضَىٰ",
-  //         english: "And the Hereafter is better for you than the first [life].",
-  //       },
-  //       {
-  //         number: 5,
-  //         arabic: "وَلَسَوْفَ يُعْطِيكَ رَبُّكَ فَتَرْضَىٰ",
-  //         english: "And your Lord is going to give you, and you will be satisfied.",
-  //       },
-  //       { number: 6, arabic: "أَلَمْ يَجِدْكَ يَتِيمًا فَآوَىٰ", english: "Did He not find you an orphan and give [you] refuge?" },
-  //       { number: 7, arabic: "وَوَجَدَكَ ضَالًّا فَهَدَىٰ", english: "And He found you lost and guided [you]," },
-  //       { number: 8, arabic: "وَوَجَدَكَ عَائِلًا فَأَغْنَىٰ", english: "And He found you poor and made [you] self-sufficient." },
-  //       { number: 9, arabic: "فَأَمَّا الْيَتِيمَ فَلَا تَقْهَرْ", english: "So as for the orphan, do not oppress [him]." },
-  //       { number: 10, arabic: "وَأَمَّا السَّائِلَ فَلَا تَنْهَرْ", english: "And as for the petitioner, do not repel [him]." },
-  //       { number: 11, arabic: "وَأَمَّا بِنِعْمَةِ رَبِّكَ فَحَدِّثْ", english: "But as for the favor of your Lord, report [it]." },
-  //     ],
-  //   },
-  //   {
-  //     number: 18,
-  //     name: "الكهف",
-  //     hasSpecialReminder: true,
-  //     verses: [
-  //       {
-  //         number: 1,
-  //         arabic: "الْحَمْدُ لِلَّهِ الَّذِي أَنزَلَ عَلَىٰ عَبْدِهِ الْكِتَابَ وَلَمْ يَجْعَل لَّهُ عِوَجًا",
-  //         english:
-  //           "All praise is due to Allah, who has sent down upon His Servant the Book and has not made therein any deviance.",
-  //       },
-  //       {
-  //         number: 2,
-  //         arabic: "قَيِّمًا لِّيُنذِرَ بَأْسًا شَدِيدًا مِّن لَّدُنْهُ وَيُبَشِّرَ الْمُؤْمِنِينَ الَّذِينَ يَعْمَلُونَ الصَّالِحَاتِ أَنَّ لَهُمْ أَجْرًا حَسَنًا",
-  //         english:
-  //           "[He has made it] straight, to warn of severe punishment from Him and to give good tidings to the believers who do righteous deeds that they will have a good reward.",
-  //       },
-  //       { number: 3, arabic: "مَّاكِثِينَ فِيهِ أَبَدًا", english: "In which they will remain forever" },
-  //     ],
-  //   },
-  //   {
-  //     number: 2,
-  //     name: "البقرة",
-  //     verses: [
-  //       {
-  //         number: 255,
-  //         arabic:
-  //           "اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ ۚ لَا تَأْخُذُهُ سِنَةٌ وَلَا نَوْمٌ ۚ لَّهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ ۗ مَن ذَا الَّذِي يَشْفَعُ عِنْدَهُ إِلَّا بِإِذْنِهِ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَيْءٍ مِّنْ عِلْمِهِ إِلَّا بِمَا شَاءَ ۚ وَسِعَ كُرْسِيُّهُ السَّمَاوَاتِ وَالْأَرْضَ ۖ وَلَا يَئُودُهُ حِفْظُهُمَا ۚ وَهُوَ الْعَلِيُّ الْعَظِيمُ",
-  //         english:
-  //           "Allah - there is no deity except Him, the Ever-Living, the Sustainer of existence. Neither drowsiness overtakes Him nor sleep. To Him belongs whatever is in the heavens and whatever is on the earth. Who is it that can intercede with Him except by His permission? He knows what is before them and what will be after them, and they encompass not a thing of His knowledge except for what He wills. His Kursi extends over the heavens and the earth, and their preservation tires Him not. And He is the Most High, the Most Great.",
-  //         isSpecial: true,
-  //         specialName: "آية الكرسي",
-  //       },
-  //     ],
-  //   },
-  // ]
-
   const currentCategory = azkarData[selectedCategory as keyof typeof azkarData]
 
   const CategoryIcon = mainTab === "duaa" ? currentCategory.icon : mainTab === "hadith" ? BookOpen : BookMarked
@@ -1205,7 +1044,6 @@ export default function AzkarApp() {
       if (newCount >= maxCount) {
         setCompletedAzkar((prev) => new Set([...prev, dhikrId]))
 
-        // Scroll to next dhikr after a short delay
         setTimeout(() => {
           const nextIndex = currentIndex + 1
           const azkarList = currentCategory.azkar
@@ -1284,11 +1122,9 @@ export default function AzkarApp() {
   }
 
   const openSurah = (surah: QuranSurah) => {
-    // Clear previous refs before opening new surah
     ayahRefs.current = {}
     setSelectedSurah(surah)
     setQuranView("reading")
-    // Scroll to top when opening a surah
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
@@ -1334,22 +1170,16 @@ export default function AzkarApp() {
 
   const isFriday = () => {
     const today = new Date()
-    return today.getDay() === 5 // 5 = Friday
+    return today.getDay() === 5
   }
-
-  // The CategoryIcon variable is defined above
-  // const CategoryIcon = mainTab === "duaa" ? currentCategory.icon : BookOpen
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pb-24">
-      {/* Header */}
       <div
         className={`bg-gradient-to-r ${mainTab === "duaa" ? currentCategory.color : mainTab === "hadith" ? "from-teal-500 to-emerald-600" : "from-purple-500 to-indigo-600"} text-white p-6 shadow-lg`}
       >
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center gap-3 mb-2">
-            {/* <CategoryIcon className="w-8 h-8" /> */}
-            {/* Conditionally render icon based on mainTab */}
             {mainTab === "duaa" && <currentCategory.icon className="w-8 h-8" />}
             {mainTab === "hadith" && <BookOpen className="w-8 h-8" />}
             {mainTab === "quran" && <BookMarked className="w-8 h-8" />}
@@ -1363,7 +1193,6 @@ export default function AzkarApp() {
         </div>
       </div>
 
-      {/* Category Tabs - Only for Duaa */}
       {mainTab === "duaa" && (
         <div className="bg-white shadow-md sticky top-0 z-10">
           <div className="max-w-4xl mx-auto px-4">
@@ -1408,7 +1237,6 @@ export default function AzkarApp() {
         </div>
       )}
 
-      {/* Main Content */}
       {mainTab === "duaa" && (
         <div className="max-w-4xl mx-auto p-4 pb-8">
           <div className="mb-4 flex justify-end">
@@ -1456,9 +1284,7 @@ export default function AzkarApp() {
                       <p className="text-sm text-gray-700 leading-relaxed">{dhikr.translation}</p>
                     </div>
 
-                    {/* Counter Section */}
                     <div className="space-y-3">
-                      {/* Progress Bar */}
                       <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                         <div
                           className={`h-full bg-gradient-to-r ${currentCategory.color} transition-all duration-300`}
@@ -1466,7 +1292,6 @@ export default function AzkarApp() {
                         />
                       </div>
 
-                      {/* Counter Display and Buttons */}
                       <div className="flex items-center justify-between">
                         <div className="text-sm text-gray-600">
                           <span className="font-semibold text-lg text-gray-800">{currentCount}</span>
@@ -1500,7 +1325,6 @@ export default function AzkarApp() {
             })}
           </div>
 
-          {/* Footer Note */}
           <div className="mt-8 p-4 bg-blue-50 rounded-lg">
             <p className="text-sm text-blue-800 text-center">
               May Allah accept your dhikr and grant you His blessings 🤲
@@ -1509,7 +1333,6 @@ export default function AzkarApp() {
         </div>
       )}
 
-      {/* Hadith Section */}
       {mainTab === "hadith" && (
         <div className="max-w-4xl mx-auto p-4 pb-8">
           <div className="mb-4 text-center">
@@ -1539,7 +1362,6 @@ export default function AzkarApp() {
                       {isRead && <span className="text-emerald-500 text-sm font-semibold">✓ Read</span>}
                     </div>
 
-                    {/* Arabic Text */}
                     <div className="text-right mb-4">
                       <p className="text-xl leading-loose text-gray-800">{hadith.arabic}</p>
                     </div>
@@ -1548,7 +1370,6 @@ export default function AzkarApp() {
                       <p className="text-sm text-gray-700 leading-relaxed">{hadith.translation}</p>
                     </div>
 
-                    {/* Read Button */}
                     <div className="flex justify-end">
                       <button
                         onClick={() => markHadithAsRead(hadith.id)}
@@ -1567,7 +1388,6 @@ export default function AzkarApp() {
             })}
           </div>
 
-          {/* Footer Note */}
           <div className="mt-8 p-4 bg-emerald-50 rounded-lg">
             <p className="text-sm text-emerald-800 text-center">
               الأربعون النووية - Imam An-Nawawi&apos;s 40 Hadith Collection 📚
@@ -1576,7 +1396,6 @@ export default function AzkarApp() {
         </div>
       )}
 
-      {/* Quran Section */}
       {mainTab === "quran" && (
         <div className="max-w-4xl mx-auto p-4 pb-8">
           {isLoadingQuran && (
@@ -1585,7 +1404,6 @@ export default function AzkarApp() {
               <p className="text-gray-600 font-medium">Loading Quran data...</p>
               <p className="text-sm text-gray-500 mt-2">Fetching all 114 surahs with translations</p>
 
-              {/* Progress bar */}
               <div className="w-64 mt-4">
                 <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                   <div
@@ -1618,10 +1436,8 @@ export default function AzkarApp() {
 
           {!isLoadingQuran && !quranError && quranData.length > 0 && (
             <>
-              {/* LIST VIEW */}
               {quranView === "list" && (
                 <>
-                  {/* Friday Reminder for Al-Kahf */}
                   {isFriday() && (
                     <div className="mb-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-lg">
                       <div className="flex items-center gap-2">
@@ -1634,7 +1450,6 @@ export default function AzkarApp() {
                     </div>
                   )}
 
-                  {/* Bookmark Continue Reading */}
                   {quranBookmark.surahNumber && (
                     <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-violet-200">
                       <div className="flex items-center justify-between">
@@ -1655,7 +1470,6 @@ export default function AzkarApp() {
                     </div>
                   )}
 
-                  {/* Surahs List */}
                   <div className="space-y-3">
                     {quranData.map((surah) => {
                       const isKahf = surah.number === 18
@@ -1700,10 +1514,8 @@ export default function AzkarApp() {
                 </>
               )}
 
-              {/* READING VIEW */}
               {quranView === "reading" && selectedSurah && (
                 <>
-                  {/* Back Button & Surah Header */}
                   <div className="mb-4 sticky top-0 bg-gradient-to-br from-slate-50 to-slate-100 z-10 pb-4">
                     <button
                       onClick={backToSurahList}
@@ -1726,7 +1538,6 @@ export default function AzkarApp() {
                     </div>
                   </div>
 
-                  {/* Verses */}
                   <div className="space-y-6">
                     {selectedSurah.verses.map((verse: QuranVerse, index: number) => {
                       const isBookmarked =
@@ -1749,7 +1560,6 @@ export default function AzkarApp() {
                                 : "bg-white shadow-md hover:shadow-lg hover:scale-[1.01]"
                           }`}
                         >
-                          {/* Special Badge for Ayat al-Kursi */}
                           {isAyatAlKursi && (
                             <div className="mb-3 flex items-center gap-2">
                               <span className="px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full">
@@ -1758,7 +1568,6 @@ export default function AzkarApp() {
                             </div>
                           )}
 
-                          {/* Ayah Number */}
                           <div className="flex items-center justify-between mb-4">
                             <span className="text-sm font-semibold text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
                               Ayah {verse.number}
@@ -1778,14 +1587,12 @@ export default function AzkarApp() {
                             </button>
                           </div>
 
-                          {/* Arabic Text */}
                           <div className="text-right mb-4">
                             <p className={`leading-loose text-gray-800 ${isAyatAlKursi ? "text-2xl" : "text-xl"}`}>
                               {verse.arabic}
                             </p>
                           </div>
 
-                          {/* English Translation */}
                           <div className="pt-4 border-t border-gray-200">
                             <p className="text-sm text-gray-700 leading-relaxed">{verse.english}</p>
                           </div>
@@ -1794,7 +1601,6 @@ export default function AzkarApp() {
                     })}
                   </div>
 
-                  {/* Al-Kahf Friday Reminder */}
                   {selectedSurah.number === 18 && isFriday() && (
                     <div className="mt-6 p-4 bg-amber-100 rounded-lg">
                       <p className="text-sm text-amber-900 text-center">
@@ -1803,9 +1609,7 @@ export default function AzkarApp() {
                     </div>
                   )}
 
-                  {/* Navigation Buttons */}
                   <div className="mt-8">
-                    {/* Previous/List/Next Navigation */}
                     <div className="flex items-stretch justify-between gap-3">
                       <button
                         onClick={goToPreviousSurah}
@@ -1850,7 +1654,6 @@ export default function AzkarApp() {
         </div>
       )}
 
-      {/* Floating Bottom Tabbar */}
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4">
         <div className="max-w-md mx-auto bg-white rounded-2xl shadow-2xl border border-gray-200">
           <div className="flex items-center justify-around px-2 py-2">
