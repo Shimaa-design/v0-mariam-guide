@@ -1376,41 +1376,17 @@ export default function AzkarApp() {
   const toggleAdhan = () => {
     if (!adhanAudioRef.current) {
       // Create audio element if it doesn't exist
-      // Try multiple sources with fallback
-      const audioSources = [
-        "/adhan.mp3", // Local file (if user added their own)
-        "https://cdn.jsdelivr.net/gh/islamic-network/adhans@master/adhans/Makkah1.mp3",
-        "https://everyayah.com/data/Alafasy_128kbps/114001.mp3", // Quran ayah as fallback for testing
-      ]
-
-      adhanAudioRef.current = new Audio()
-      adhanAudioRef.current.crossOrigin = "anonymous" // Enable CORS
-
-      let currentSourceIndex = 0
-
-      const tryNextSource = () => {
-        if (currentSourceIndex < audioSources.length) {
-          adhanAudioRef.current!.src = audioSources[currentSourceIndex]
-          currentSourceIndex++
-        } else {
-          setIsPlayingAdhan(false)
-          alert(
-            "Failed to load Adhan audio from all sources.\n\nTo use your own Adhan audio:\n1. Download an Adhan MP3 file\n2. Rename it to 'adhan.mp3'\n3. Place it in the 'public' folder of your project",
-          )
-        }
-      }
-
-      // Set initial source
-      tryNextSource()
+      adhanAudioRef.current = new Audio("https://www.islamcan.com/audio/adhan/azan2.mp3")
 
       // Add event listeners
       adhanAudioRef.current.addEventListener("ended", () => {
         setIsPlayingAdhan(false)
       })
 
-      adhanAudioRef.current.addEventListener("error", () => {
-        console.error("Failed to load audio from:", adhanAudioRef.current!.src)
-        tryNextSource()
+      adhanAudioRef.current.addEventListener("error", (e) => {
+        console.error("Failed to load Adhan audio:", e)
+        setIsPlayingAdhan(false)
+        alert("Failed to load Adhan audio. Please check your internet connection and try again.")
       })
     }
 
