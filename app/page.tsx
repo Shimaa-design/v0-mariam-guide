@@ -1826,7 +1826,7 @@ export default function AzkarApp() {
             <>
               {/* Prayer Times List */}
               <div className="space-y-3">
-                <div className="mb-4">
+                <div className="mb-4 mt-6">
                   <h3 className="text-lg font-semibold text-gray-800">Today's Prayer Times</h3>
                   <p className="text-sm text-gray-600 mt-1">
                     {location.city}, {location.country}
