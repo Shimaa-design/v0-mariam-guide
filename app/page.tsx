@@ -106,6 +106,27 @@ export default function AzkarApp() {
         console.error("Failed to load quran bookmark:", error)
       }
     }
+
+    // Load cached Quran data
+    const cachedQuranData = localStorage.getItem("mariam-guide-quran-data")
+    const cachedVersion = localStorage.getItem("mariam-guide-quran-cache-version")
+    const CACHE_VERSION = "v1"
+
+    if (cachedQuranData && cachedVersion === CACHE_VERSION) {
+      try {
+        const parsedData = JSON.parse(cachedQuranData)
+        if (Array.isArray(parsedData) && parsedData.length > 0) {
+          console.log("[v0] Loading Quran data from cache...")
+          setQuranData(parsedData)
+          console.log(`[v0] Successfully loaded ${parsedData.length} surahs from cache`)
+        }
+      } catch (error) {
+        console.error("Failed to load cached Quran data:", error)
+        // Clear invalid cache
+        localStorage.removeItem("mariam-guide-quran-data")
+        localStorage.removeItem("mariam-guide-quran-cache-version")
+      }
+    }
   }, [])
 
   useEffect(() => {
@@ -257,6 +278,18 @@ export default function AzkarApp() {
 
         console.log("[v0] Successfully fetched all surahs")
         setQuranData(allSurahs)
+
+        // Cache the Quran data
+        try {
+          const CACHE_VERSION = "v1"
+          localStorage.setItem("mariam-guide-quran-data", JSON.stringify(allSurahs))
+          localStorage.setItem("mariam-guide-quran-cache-version", CACHE_VERSION)
+          console.log("[v0] Quran data cached successfully")
+        } catch (error) {
+          console.error("[v0] Failed to cache Quran data:", error)
+          // Continue even if caching fails
+        }
+
         setIsLoadingQuran(false)
       } catch (error) {
         console.error("[v0] Error fetching Quran data:", error)
