@@ -1306,6 +1306,13 @@ export default function AzkarApp() {
     return today.getDay() === 5
   }
 
+  const convertTo12Hour = (time24: string) => {
+    const [hours, minutes] = time24.split(":").map(Number)
+    const period = hours >= 12 ? "PM" : "AM"
+    const hours12 = hours % 12 || 12
+    return `${hours12}:${minutes.toString().padStart(2, "0")} ${period}`
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pb-24">
       <div
@@ -1817,24 +1824,6 @@ export default function AzkarApp() {
             </div>
           ) : prayerTimes && location ? (
             <>
-              {/* Next Prayer Countdown */}
-              {nextPrayer && (
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-6 mb-6 shadow-lg">
-                  <div className="text-center">
-                    <p className="text-sm text-green-700 font-medium mb-2">Next Prayer</p>
-                    <h2 className="text-3xl font-bold text-green-800 mb-3">{nextPrayer.name}</h2>
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <Clock className="w-5 h-5 text-green-600" />
-                      <p className="text-xl font-semibold text-green-700">{nextPrayer.time}</p>
-                    </div>
-                    <div className="mt-4 pt-4 border-t border-green-200">
-                      <p className="text-sm text-green-600 mb-1">Time Remaining</p>
-                      <p className="text-2xl font-bold text-green-800">{countdown}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* Prayer Times List */}
               <div className="space-y-3">
                 <div className="mb-4">
@@ -1867,12 +1856,14 @@ export default function AzkarApp() {
                             <h4 className={`font-semibold ${isNext ? "text-blue-800" : "text-gray-800"}`}>
                               {prayer.name}
                             </h4>
-                            {isNext && <p className="text-xs text-blue-600 font-medium">Next Prayer</p>}
+                            {isNext && (
+                              <p className="text-xs text-blue-600 font-medium">Next Prayer - {countdown}</p>
+                            )}
                           </div>
                         </div>
                         <div className="text-right">
                           <p className={`text-xl font-bold ${isNext ? "text-blue-700" : "text-gray-700"}`}>
-                            {prayer.time}
+                            {convertTo12Hour(prayer.time)}
                           </p>
                         </div>
                       </div>
