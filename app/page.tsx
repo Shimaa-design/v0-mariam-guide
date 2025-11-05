@@ -36,6 +36,21 @@ interface QuranSurah {
   hasSpecialReminder?: boolean
 }
 
+interface PrayerTimes {
+  Fajr: string
+  Dhuhr: string
+  Asr: string
+  Maghrib: string
+  Isha: string
+}
+
+interface LocationData {
+  city: string
+  country: string
+  latitude: number
+  longitude: number
+}
+
 export default function AzkarApp() {
   const [mainTab, setMainTab] = useState("duaa")
   const [selectedCategory, setSelectedCategory] = useState("morning")
@@ -55,6 +70,14 @@ export default function AzkarApp() {
   const [loadingProgress, setLoadingProgress] = useState(0)
   const dhikrRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const ayahRefs = useRef<Record<string, HTMLDivElement | null>>({})
+
+  // Prayer times state
+  const [prayerTimes, setPrayerTimes] = useState<PrayerTimes | null>(null)
+  const [location, setLocation] = useState<LocationData | null>(null)
+  const [isLoadingPrayer, setIsLoadingPrayer] = useState(false)
+  const [prayerError, setPrayerError] = useState<string | null>(null)
+  const [nextPrayer, setNextPrayer] = useState<{ name: string; time: string } | null>(null)
+  const [countdown, setCountdown] = useState<string>("")
 
   useEffect(() => {
     const savedCounts = localStorage.getItem("mariam-guide-duaa-counts")
@@ -246,6 +269,116 @@ export default function AzkarApp() {
       fetchQuranData()
     }
   }, [mainTab])
+
+  // Fetch location and prayer times
+  useEffect(() => {
+    const fetchLocationAndPrayer = async () => {
+      if (mainTab !== "pray" || prayerTimes) return
+
+      setIsLoadingPrayer(true)
+      setPrayerError(null)
+
+      try {
+        // Get location from browser geolocation API
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject)
+        })
+
+        const { latitude, longitude } = position.coords
+
+        // Fetch location name from reverse geocoding API
+        const locationResponse = await fetch(
+          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
+        )
+        const locationData = await locationResponse.json()
+
+        const locationInfo: LocationData = {
+          city: locationData.city || locationData.locality || "Unknown",
+          country: locationData.countryName || "Unknown",
+          latitude,
+          longitude,
+        }
+        setLocation(locationInfo)
+
+        // Fetch prayer times from Aladhan API
+        const date = new Date()
+        const prayerResponse = await fetch(
+          `https://api.aladhan.com/v1/timings/${Math.floor(date.getTime() / 1000)}?latitude=${latitude}&longitude=${longitude}&method=2`,
+        )
+        const prayerData = await prayerResponse.json()
+
+        if (prayerData.code === 200) {
+          const timings = prayerData.data.timings
+          setPrayerTimes({
+            Fajr: timings.Fajr,
+            Dhuhr: timings.Dhuhr,
+            Asr: timings.Asr,
+            Maghrib: timings.Maghrib,
+            Isha: timings.Isha,
+          })
+        } else {
+          throw new Error("Failed to fetch prayer times")
+        }
+
+        setIsLoadingPrayer(false)
+      } catch (error) {
+        console.error("Error fetching prayer times:", error)
+        setPrayerError(
+          error instanceof Error ? error.message : "Failed to fetch prayer times. Please enable location access.",
+        )
+        setIsLoadingPrayer(false)
+      }
+    }
+
+    fetchLocationAndPrayer()
+  }, [mainTab, prayerTimes])
+
+  // Calculate next prayer and countdown
+  useEffect(() => {
+    if (!prayerTimes || mainTab !== "pray") return
+
+    const updateCountdown = () => {
+      const now = new Date()
+      const currentTime = now.getHours() * 60 + now.getMinutes()
+
+      const prayers = [
+        { name: "Fajr", time: prayerTimes.Fajr },
+        { name: "Dhuhr", time: prayerTimes.Dhuhr },
+        { name: "Asr", time: prayerTimes.Asr },
+        { name: "Maghrib", time: prayerTimes.Maghrib },
+        { name: "Isha", time: prayerTimes.Isha },
+      ]
+
+      // Convert prayer times to minutes
+      const prayerMinutes = prayers.map((p) => {
+        const [hours, minutes] = p.time.split(":").map(Number)
+        return { ...p, minutes: hours * 60 + minutes }
+      })
+
+      // Find next prayer
+      let next = prayerMinutes.find((p) => p.minutes > currentTime)
+
+      if (!next) {
+        // Next prayer is Fajr tomorrow
+        next = { ...prayerMinutes[0], minutes: prayerMinutes[0].minutes + 24 * 60 }
+      }
+
+      setNextPrayer({ name: next.name, time: next.time })
+
+      // Calculate countdown
+      let diff = next.minutes - currentTime
+      if (diff < 0) diff += 24 * 60
+
+      const hours = Math.floor(diff / 60)
+      const minutes = diff % 60
+      setCountdown(`${hours}h ${minutes}m`)
+    }
+
+    updateCountdown()
+    const interval = setInterval(updateCountdown, 60000) // Update every minute
+
+    return () => clearInterval(interval)
+  }, [prayerTimes, mainTab])
 
   const azkarData = {
     morning: {
@@ -1173,22 +1306,31 @@ export default function AzkarApp() {
     return today.getDay() === 5
   }
 
+  const convertTo12Hour = (time24: string) => {
+    const [hours, minutes] = time24.split(":").map(Number)
+    const period = hours >= 12 ? "PM" : "AM"
+    const hours12 = hours % 12 || 12
+    return `${hours12}:${minutes.toString().padStart(2, "0")} ${period}`
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pb-24">
       <div
-        className={`bg-gradient-to-r ${mainTab === "duaa" ? currentCategory.color : mainTab === "hadith" ? "from-teal-500 to-emerald-600" : "from-purple-500 to-indigo-600"} text-white p-6 shadow-lg`}
+        className={`bg-gradient-to-r ${mainTab === "duaa" ? currentCategory.color : mainTab === "hadith" ? "from-teal-500 to-emerald-600" : mainTab === "pray" ? "from-blue-500 to-indigo-600" : "from-purple-500 to-indigo-600"} text-white p-6 shadow-lg`}
       >
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center gap-3 mb-2">
             {mainTab === "duaa" && <currentCategory.icon className="w-8 h-8" />}
             {mainTab === "hadith" && <BookOpen className="w-8 h-8" />}
             {mainTab === "quran" && <BookMarked className="w-8 h-8" />}
+            {mainTab === "pray" && <Clock className="w-8 h-8" />}
             <h1 className="text-3xl font-bold">Mariam Guide</h1>
           </div>
           <p className="text-white/90">
             {mainTab === "duaa" && currentCategory.title}
             {mainTab === "hadith" && "الأربعون النووية"}
             {mainTab === "quran" && "Quran"}
+            {mainTab === "pray" && "Prayer Times"}
           </p>
         </div>
       </div>
@@ -1654,6 +1796,86 @@ export default function AzkarApp() {
         </div>
       )}
 
+      {mainTab === "pray" && (
+        <div className="pb-32 px-4 max-w-md mx-auto">
+          {isLoadingPrayer ? (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
+              <p className="text-gray-600">Loading prayer times...</p>
+            </div>
+          ) : prayerError ? (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-6 mt-6">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-1" />
+                <div>
+                  <h3 className="font-semibold text-red-800 mb-2">Error Loading Prayer Times</h3>
+                  <p className="text-sm text-red-700">{prayerError}</p>
+                  <button
+                    onClick={() => {
+                      setPrayerTimes(null)
+                      setPrayerError(null)
+                    }}
+                    className="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors"
+                  >
+                    Retry
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : prayerTimes && location ? (
+            <>
+              {/* Prayer Times List */}
+              <div className="space-y-3">
+                <div className="mb-4 mt-6">
+                  <h3 className="text-lg font-semibold text-gray-800">Today's Prayer Times</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {location.city}, {location.country}
+                  </p>
+                </div>
+                {[
+                  { name: "Fajr", time: prayerTimes.Fajr, icon: "🌅" },
+                  { name: "Dhuhr", time: prayerTimes.Dhuhr, icon: "☀️" },
+                  { name: "Asr", time: prayerTimes.Asr, icon: "🌤️" },
+                  { name: "Maghrib", time: prayerTimes.Maghrib, icon: "🌆" },
+                  { name: "Isha", time: prayerTimes.Isha, icon: "🌙" },
+                ].map((prayer) => {
+                  const isNext = nextPrayer?.name === prayer.name
+                  return (
+                    <div
+                      key={prayer.name}
+                      className={`p-4 rounded-xl transition-all ${
+                        isNext
+                          ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 shadow-md"
+                          : "bg-white shadow-md hover:shadow-lg"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{prayer.icon}</span>
+                          <div>
+                            <h4 className={`font-semibold ${isNext ? "text-blue-800" : "text-gray-800"}`}>
+                              {prayer.name}
+                            </h4>
+                            {isNext && (
+                              <p className="text-xs text-blue-600 font-medium">Next Prayer - {countdown}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-xl font-bold ${isNext ? "text-blue-700" : "text-gray-700"}`}>
+                            {convertTo12Hour(prayer.time)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          ) : null}
+        </div>
+      )}
+
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4">
         <div className="max-w-md mx-auto bg-white rounded-2xl shadow-2xl border border-gray-200">
           <div className="flex items-center justify-around px-2 py-2">
@@ -1690,6 +1912,18 @@ export default function AzkarApp() {
               <BookMarked className={`w-6 h-6 mb-1 ${mainTab === "quran" ? "text-purple-600" : "text-gray-400"}`} />
               <span className={`text-xs font-semibold ${mainTab === "quran" ? "text-purple-600" : "text-gray-500"}`}>
                 Quran
+              </span>
+            </button>
+
+            <button
+              onClick={() => setMainTab("pray")}
+              className={`flex flex-col items-center justify-center flex-1 py-2 px-3 rounded-xl transition-all ${
+                mainTab === "pray" ? "bg-gradient-to-br from-blue-50 to-indigo-50" : "hover:bg-gray-50"
+              }`}
+            >
+              <Clock className={`w-6 h-6 mb-1 ${mainTab === "pray" ? "text-blue-600" : "text-gray-400"}`} />
+              <span className={`text-xs font-semibold ${mainTab === "pray" ? "text-blue-600" : "text-gray-500"}`}>
+                Pray
               </span>
             </button>
           </div>
