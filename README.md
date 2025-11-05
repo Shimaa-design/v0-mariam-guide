@@ -28,3 +28,18 @@ Continue building your app on:
 2. Deploy your chats from the v0 interface
 3. Changes are automatically pushed to this repository
 4. Vercel deploys the latest version from this repository
+
+## Adhan Audio Setup (Optional)
+
+The Prayer Times tab includes an Adhan button that plays the Islamic call to prayer. The app will automatically try to load Adhan audio from CDN sources. If those fail, you can add your own Adhan audio file:
+
+1. Download an Adhan MP3 file from a reliable source such as:
+   - [Internet Archive - Adhans](https://archive.org/details/adhans_sunnah)
+   - [IslamCan Adhan Downloads](https://www.islamcan.com/audio/adhan/)
+   - Any other Islamic audio resource
+
+2. Rename the file to `adhan.mp3`
+
+3. Place it in the `public` folder of your project
+
+4. The app will automatically use your local audio file as a fallback if CDN sources are unavailable
