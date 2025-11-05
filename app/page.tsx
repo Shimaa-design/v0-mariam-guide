@@ -1817,21 +1817,6 @@ export default function AzkarApp() {
             </div>
           ) : prayerTimes && location ? (
             <>
-              {/* Location Info */}
-              <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-5 rounded-xl shadow-lg mb-6">
-                <div className="flex items-center gap-3 mb-2">
-                  <DoorOpen className="w-6 h-6" />
-                  <div>
-                    <h3 className="font-semibold text-lg">
-                      {location.city}, {location.country}
-                    </h3>
-                    <p className="text-sm text-white/80">
-                      {location.latitude.toFixed(2)}°N, {location.longitude.toFixed(2)}°E
-                    </p>
-                  </div>
-                </div>
-              </div>
-
               {/* Next Prayer Countdown */}
               {nextPrayer && (
                 <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-6 mb-6 shadow-lg">
@@ -1852,7 +1837,12 @@ export default function AzkarApp() {
 
               {/* Prayer Times List */}
               <div className="space-y-3">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">Today's Prayer Times</h3>
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Today's Prayer Times</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {location.city}, {location.country}
+                  </p>
+                </div>
                 {[
                   { name: "Fajr", time: prayerTimes.Fajr, icon: "🌅" },
                   { name: "Dhuhr", time: prayerTimes.Dhuhr, icon: "☀️" },
