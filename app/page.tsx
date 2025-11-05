@@ -18,6 +18,8 @@ import {
   AlertCircle,
   List,
   Loader2,
+  Volume2,
+  Pause,
 } from "lucide-react"
 
 interface QuranVerse {
@@ -78,6 +80,10 @@ export default function AzkarApp() {
   const [prayerError, setPrayerError] = useState<string | null>(null)
   const [nextPrayer, setNextPrayer] = useState<{ name: string; time: string } | null>(null)
   const [countdown, setCountdown] = useState<string>("")
+
+  // Adhan audio state
+  const [isPlayingAdhan, setIsPlayingAdhan] = useState(false)
+  const adhanAudioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
     const savedCounts = localStorage.getItem("mariam-guide-duaa-counts")
@@ -1346,6 +1352,38 @@ export default function AzkarApp() {
     return `${hours12}:${minutes.toString().padStart(2, "0")} ${period}`
   }
 
+  const toggleAdhan = () => {
+    if (!adhanAudioRef.current) {
+      // Create audio element if it doesn't exist
+      adhanAudioRef.current = new Audio("https://www.islamcan.com/audio/adhan/adhan-makkah.mp3")
+
+      // Add event listeners
+      adhanAudioRef.current.addEventListener("ended", () => {
+        setIsPlayingAdhan(false)
+      })
+
+      adhanAudioRef.current.addEventListener("error", () => {
+        setIsPlayingAdhan(false)
+        alert("Failed to load Adhan audio. Please check your internet connection.")
+      })
+    }
+
+    if (isPlayingAdhan) {
+      adhanAudioRef.current.pause()
+      setIsPlayingAdhan(false)
+    } else {
+      adhanAudioRef.current.play()
+        .then(() => {
+          setIsPlayingAdhan(true)
+        })
+        .catch((error) => {
+          console.error("Error playing Adhan:", error)
+          setIsPlayingAdhan(false)
+          alert("Failed to play Adhan audio. Please try again.")
+        })
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pb-24">
       <div
@@ -1903,6 +1941,32 @@ export default function AzkarApp() {
                     </div>
                   )
                 })}
+              </div>
+
+              {/* Adhan Button */}
+              <div className="mt-6">
+                <button
+                  onClick={toggleAdhan}
+                  className={`w-full py-4 px-6 rounded-xl font-semibold text-white shadow-lg transition-all transform hover:scale-105 active:scale-95 ${
+                    isPlayingAdhan
+                      ? "bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700"
+                      : "bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700"
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-3">
+                    {isPlayingAdhan ? (
+                      <>
+                        <Pause className="w-6 h-6" />
+                        <span className="text-lg">Pause Adhan</span>
+                      </>
+                    ) : (
+                      <>
+                        <Volume2 className="w-6 h-6" />
+                        <span className="text-lg">Play Adhan</span>
+                      </>
+                    )}
+                  </div>
+                </button>
               </div>
             </>
           ) : null}
