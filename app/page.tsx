@@ -318,31 +318,52 @@ export default function AzkarApp() {
       setPrayerError(null)
 
       try {
-        // Get location from browser geolocation API
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject)
-        })
+        let locationInfo: LocationData | null = null
 
-        const { latitude, longitude } = position.coords
+        // Check localStorage for saved location
+        const savedLocation = localStorage.getItem("mariam-guide-location")
+        const savedDate = localStorage.getItem("mariam-guide-location-date")
+        const today = new Date().toDateString()
 
-        // Fetch location name from reverse geocoding API
-        const locationResponse = await fetch(
-          `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
-        )
-        const locationData = await locationResponse.json()
+        if (savedLocation && savedDate === today) {
+          // Use saved location if it's from today
+          locationInfo = JSON.parse(savedLocation)
+          setLocation(locationInfo)
+        } else {
+          // Get location from browser geolocation API
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject)
+          })
 
-        const locationInfo: LocationData = {
-          city: locationData.city || locationData.locality || "Unknown",
-          country: locationData.countryName || "Unknown",
-          latitude,
-          longitude,
+          const { latitude, longitude } = position.coords
+
+          // Fetch location name from reverse geocoding API
+          const locationResponse = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
+          )
+          const locationData = await locationResponse.json()
+
+          locationInfo = {
+            city: locationData.city || locationData.locality || "Unknown",
+            country: locationData.countryName || "Unknown",
+            latitude,
+            longitude,
+          }
+          setLocation(locationInfo)
+
+          // Save location to localStorage
+          localStorage.setItem("mariam-guide-location", JSON.stringify(locationInfo))
+          localStorage.setItem("mariam-guide-location-date", today)
         }
-        setLocation(locationInfo)
 
         // Fetch prayer times from Aladhan API
+        if (!locationInfo) {
+          throw new Error("Failed to get location")
+        }
+
         const date = new Date()
         const prayerResponse = await fetch(
-          `https://api.aladhan.com/v1/timings/${Math.floor(date.getTime() / 1000)}?latitude=${latitude}&longitude=${longitude}&method=2`,
+          `https://api.aladhan.com/v1/timings/${Math.floor(date.getTime() / 1000)}?latitude=${locationInfo.latitude}&longitude=${locationInfo.longitude}&method=2`,
         )
         const prayerData = await prayerResponse.json()
 
@@ -1898,10 +1919,37 @@ export default function AzkarApp() {
               {/* Prayer Times List */}
               <div className="space-y-3">
                 <div className="mb-4 mt-6">
-                  <h3 className="text-lg font-semibold text-gray-800">Today's Prayer Times</h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {location.city}, {location.country}
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800">Today's Prayer Times</h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {location.city}, {location.country}
+                      </p>
+                    </div>
+                    {/* Adhan Button */}
+                    <button
+                      onClick={toggleAdhan}
+                      className={`px-4 py-2 rounded-lg font-medium text-white shadow-md transition-all hover:shadow-lg active:scale-95 ${
+                        isPlayingAdhan
+                          ? "bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700"
+                          : "bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {isPlayingAdhan ? (
+                          <>
+                            <Pause className="w-5 h-5" />
+                            <span className="text-sm">Pause</span>
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="w-5 h-5" />
+                            <span className="text-sm">Adhan</span>
+                          </>
+                        )}
+                      </div>
+                    </button>
+                  </div>
                 </div>
                 {[
                   { name: "Fajr", time: prayerTimes.Fajr, icon: "🌅" },
@@ -1941,32 +1989,6 @@ export default function AzkarApp() {
                     </div>
                   )
                 })}
-              </div>
-
-              {/* Adhan Button */}
-              <div className="mt-6">
-                <button
-                  onClick={toggleAdhan}
-                  className={`w-full py-4 px-6 rounded-xl font-semibold text-white shadow-lg transition-all transform hover:scale-105 active:scale-95 ${
-                    isPlayingAdhan
-                      ? "bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700"
-                      : "bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700"
-                  }`}
-                >
-                  <div className="flex items-center justify-center gap-3">
-                    {isPlayingAdhan ? (
-                      <>
-                        <Pause className="w-6 h-6" />
-                        <span className="text-lg">Pause Adhan</span>
-                      </>
-                    ) : (
-                      <>
-                        <Volume2 className="w-6 h-6" />
-                        <span className="text-lg">Play Adhan</span>
-                      </>
-                    )}
-                  </div>
-                </button>
               </div>
             </>
           ) : null}
