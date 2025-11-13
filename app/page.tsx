@@ -1,26 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import {
-  Moon,
-  Sun,
-  BookOpen,
-  Heart,
-  Clock,
-  Home,
-  Utensils,
-  CloudRain,
-  Car,
-  Frown,
-  Smile,
-  BookMarked,
-  DoorOpen,
-  AlertCircle,
-  List,
-  Loader2,
-  Volume2,
-  Pause,
-} from "lucide-react"
+import { Moon, Sun, BookOpen, Heart, Clock, Home, Utensils, CloudRain, Car, Frown, Smile, BookMarked, DoorOpen, AlertCircle, List, Loader2, Volume2, Pause, VolumeX } from 'lucide-react'
 
 interface QuranVerse {
   number: number
@@ -85,6 +66,10 @@ export default function AzkarApp() {
   const [isPlayingAdhan, setIsPlayingAdhan] = useState(false)
   const adhanAudioRef = useRef<HTMLAudioElement | null>(null)
 
+  const [playingDuaaId, setPlayingDuaaId] = useState<string | null>(null)
+  const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null)
+  const [arabicVoiceAvailable, setArabicVoiceAvailable] = useState(false);
+
   useEffect(() => {
     const savedCounts = localStorage.getItem("mariam-guide-duaa-counts")
     if (savedCounts) {
@@ -118,12 +103,15 @@ export default function AzkarApp() {
     const cachedVersion = localStorage.getItem("mariam-guide-quran-cache-version")
     const CACHE_VERSION = "v1"
 
+    let cacheLoaded = false
+
     if (cachedQuranData && cachedVersion === CACHE_VERSION) {
       try {
         const parsedData = JSON.parse(cachedQuranData)
         if (Array.isArray(parsedData) && parsedData.length > 0) {
           console.log("[v0] Loading Quran data from cache...")
           setQuranData(parsedData)
+          cacheLoaded = true
           console.log(`[v0] Successfully loaded ${parsedData.length} surahs from cache`)
         }
       } catch (error) {
@@ -133,7 +121,11 @@ export default function AzkarApp() {
         localStorage.removeItem("mariam-guide-quran-cache-version")
       }
     }
-  }, [])
+
+    if (!cacheLoaded && quranData.length === 0) {
+      fetchQuranData()
+    }
+  }, []) // Empty dependency array means this runs once on mount
 
   useEffect(() => {
     localStorage.setItem("mariam-guide-duaa-counts", JSON.stringify(counts))
@@ -304,10 +296,12 @@ export default function AzkarApp() {
       }
     }
 
-    if (quranData.length === 0 && mainTab === "quran") {
-      fetchQuranData()
+    // The logic for when to call fetchQuranData has been moved up to the first useEffect
+    // to correctly handle cache loading. This block remains for clarity but the condition is now handled above.
+    if (quranData.length === 0) {
+      // fetchQuranData() // This is now handled by the first useEffect
     }
-  }, [mainTab])
+  }, []) // Empty dependency array means this runs once on mount
 
   // Fetch location and prayer times
   useEffect(() => {
@@ -439,6 +433,36 @@ export default function AzkarApp() {
 
     return () => clearInterval(interval)
   }, [prayerTimes, mainTab])
+
+  useEffect(() => {
+    const checkVoices = () => {
+      if (typeof window === "undefined" || !window.speechSynthesis) {
+        setArabicVoiceAvailable(false)
+        return
+      }
+      const voices = window.speechSynthesis.getVoices()
+      const hasArabic = voices.some((voice) => voice.lang.startsWith("ar"))
+      setArabicVoiceAvailable(hasArabic)
+    }
+
+    // Check immediately
+    checkVoices()
+
+    // Some browsers load voices asynchronously
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = checkVoices
+    } else {
+      // Fallback for browsers that don't support onvoiceschanged
+      const intervalId = setInterval(checkVoices, 500)
+      return () => clearInterval(intervalId)
+    }
+
+    return () => {
+      if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = null
+      }
+    }
+  }, [])
 
   const azkarData = {
     morning: {
@@ -666,7 +690,7 @@ export default function AzkarApp() {
         },
         {
           id: "s5",
-          arabic: "آية الكرسي",
+          arabic: "آيَة الكرسي",
           translation: "Recite Ayat al-Kursi (Al-Baqarah 2:255)",
           count: 1,
         },
@@ -948,9 +972,9 @@ export default function AzkarApp() {
       id: "h2",
       number: 2,
       arabic:
-        "بَيْنَمَا نَحْنُ جُلُوسٌ عِنْدَ رَسُولِ اللَّهِ صلى الله عليه وسلم ذَاتَ يَوْمٍ، إِذْ طَلَعَ عَلَيْنَا رَجُلٌ شَدِيدُ بَيَاضِ الثِّيَابِ، شَدِيدُ سَوَادِ الشَّعْرِ، لَا يُرَى عَلَيْهِ أَثَرُ السَّفَرِ، وَلَا يَعْرِفُهُ مِنَّا أَحَدٌ، حَتَّى جَلَسَ إِلَى النَّبِيِّ صلى الله عليه وسلم، فَأَسْنَدَ رُكْبَتَيْهِ إِلَى رُكْبَتَيْهِ، وَوَضَعَ كَفَّيْهِ عَلَى فَخِذَيْهِ، وَقَالَ: يَا مُحَمَّدُ أَخْبِرْنِي عَنْ الْإِسْلَامِ. فَقَالَ رَسُولُ اللَّهِ صلى الله عليه وسلم: الْإِسْلَامُ أَنْ تَشْهَدَ أَنْ لَا إلَهَ إلَّا اللَّهُ وَأَنَّ مُحَمَّدًا رَسُولُ اللَّهِ، وَتُقِيمَ الصَّلَاةَ، وَتُؤْتِيَ الزَّكَاةَ، وَتَصُومَ رَمَضَانَ، وَتَحُجَّ الْبَيْتَ إنْ اسْتَطَعْت إلَيْهِ سَبِيلًا. قَالَ: صَدَقْت. فَعَجِبْنَا لَهُ يَسْأَلُهُ وَيُصَدِّقُهُ! قَالَ: فَأَخْبِرْنِي عَنْ الْإِيمَانِ. قَالَ: أَنْ تُؤْمِنَ بِاَللَّهِ وَمَلَائِكَتِهِ وَكُتُبِهِ وَرُسُلِهِ وَالْيَوْمِ الْآخِرِ، وَتُؤْمِنَ بِالْقَدَرِ خَيْرِهِ وَشَرِّهِ. قَالَ: صَدَقْت. قَالَ: فَأَخْبِرْنِي عَنْ الْإِحْسَانِ. قَالَ: أَنْ تَعْبُدَ اللَّهَ كَأَنَّك تَرَاهُ، فَإِنْ لَمْ تَكُنْ تَرَاهُ فَإِنَّهُ يَرَاك",
+        "بَيْنَا نَحْنُ جُلُوسٌ عِنْدَ رَسُولِ اللَّهِ صلى الله عليه وسلم ذَاتَ يَوْمٍ، إِذْ طَلَعَ عَلَيْنَا رَجُلٌ شَدِيدُ بَيَاضِ الثِّيَابِ، شَدِيدُ سَوَادِ الشَّعْرِ، لَا يُرَى عَلَيْهِ أَثَرُ السَّفَرِ، وَلَا يَعْرِفُهُ مِنَّا أَحَدٌ، حَتَّى جَلَسَ إِلَى النَّبِيِّ صلى الله عليه وسلم، فَأَسْنَدَ رُكْبَتَيْهِ إِلَى رُكْبَتَيْهِ، وَوَضَعَ كَفَّيْهِ عَلَى فَخِذَيْهِ، وَقَالَ: يَا مُحَمَّدُ أَخْبِرْنِي عَنْ الْإِسْلَامِ. فَقَالَ رَسُولُ اللَّهِ صلى الله عليه وسلم: الْإِسْلَامُ أَنْ تَشْهَدَ أَنْ لَا إلَهَ إلَّا اللَّهُ وَأَنَّ مُحَمَّدًا رَسُولُ اللَّهِ، وَتُقِيمَ الصَّلَاةَ، وَتُؤْتِيَ الزَّكَاةَ، وَتَصُومَ رَمَضَانَ، وَتَحُجَّ الْبَيْتَ إنْ اسْتَطَعْت إلَيْهِ سَبِيلًا. قَالَ: صَدَقْت. فَعَجِبْنَا لَهُ يَسْأَلُهُ وَيُصَدِّقُهُ! قَالَ: فَأَخْبِرْنِي عَنْ الْإِيمَانِ. قَالَ: أَنْ تُؤْمِنَ بِاَللَّهِ وَمَلَائِكَتِهِ وَكُتُبِهِ وَرُسُلِهِ وَالْيَوْمِ الْآخِرِ، وَتُؤْمِنَ بِالْقَدَرِ خَيْرِهِ وَشَرِّهِ. قَالَ: صَدَقْت. قَالَ: فَأَخْبِرْنِي عَنْ الْإِحْسَانِ. قَالَ: أَنْ تَعْبُدَ اللَّهَ كَأَنَّك تَرَاهُ، فَإِنْ لَمْ تَكُنْ تَرَاهُ فَإِنَّهُ يَرَاك",
       translation:
-        "One day while we were sitting with the Messenger of Allah, a man appeared with extremely white clothing and extremely black hair. No signs of travel were visible on him, and none of us knew him. He sat down before the Prophet, rested his knees against his knees, and placed his palms on his thighs. He said: 'O Muhammad, tell me about Islam.' The Messenger of Allah said: 'Islam is to testify that there is no god but Allah and that Muhammad is the Messenger of Allah, to establish prayer, to give zakah, to fast Ramadan, and to make pilgrimage to the House if you are able.' He said: 'You have spoken truthfully.' We were amazed that he would ask him and then confirm his answer. He said: 'Tell me about Iman (faith).' He said: 'It is to believe in Allah, His angels, His books, His messengers, the Last Day, and to believe in divine decree, both the good and the evil thereof.' He said: 'You have spoken truthfully.' He said: 'Tell me about Ihsan (excellence).' He said: 'It is to worship Allah as if you see Him, and if you do not see Him, then indeed He sees you.'",
+        "One day while we were sitting with the Messenger of Allah, a man appeared with extremely white clothing and extremely black hair. No signs of travel were visible on him, and none of us knew him. He sat down before the Prophet, rested his knees against his knees, and placed his palms on his thighs. He said: 'O Muhammad, tell me about Islam.' The Messenger of Allah said: 'Islam is to testify that there is no god but Allah and that Muhammad is the Messenger of Allah, to establish prayer, to give zakah, to fast Ramadan, and to make pilgrimage to the House if you are able.' He said: 'You have spoken truthfully.' We were amazed that he would ask him and then confirm his answer. He said: 'Tell me about Iman (faith).' He said: 'It is to believe in Allah, His angels, His books, His messengers, the Last Day, and to believe in divine decree, both the good and the evil thereof.' He said: 'You have spoken truthfully.' He said: 'Tell me about Ihsan (excellence).' He said: 'It is to worship Allah as if you see Him, and if you do not see Him, then indeed He sees You.'",
     },
     {
       id: "h3",
@@ -964,7 +988,7 @@ export default function AzkarApp() {
       id: "h4",
       number: 4,
       arabic:
-        "إنَّ أَحَدَكُمْ يُجْمَعُ خَلْقُهُ فِي بَطْنِ أُمِّهِ أَرْبَعِينَ يَوْمًا نُطْفَةً، ثُمَّ يَكُونُ عَلَقَةً مِثْلَ ذَلِكَ، ثُمَّ يَكُونُ مُضْغَةً مِثْلَ ذَلِكَ، ثُمَّ يُرْسَلُ إلَيْهِ الْمَلَكُ فَيَنْفُخُ فِيهِ الرُّوحَ، وَيُؤْمَرُ بِأَرْبَعِ كَلِمَاتٍ: بِكَتْبِ رِزْقِهِ، وَأَجَلِهِ، وَعَمَلِهِ، وَشَقِيٍّ أَمْ سَعِيدٍ",
+        "إِنَّ أَحَدَكُمْ يُجْمَعُ خَلْقُهُ فِي بَطْنِ أُمِّهِ أَرْبَعِينَ يَوْمًا نُطْفَةً، ثُمَّ يَكُونُ عَلَقَةً مِثْلَ ذَلِكَ، ثُمَّ يَكُونُ مُضْغَةً مِثْلَ ذَلِكَ، ثُمَّ يُرْسَلُ إلَيْهِ الْمَلَكُ فَيَنْفُخُ فِيهِ الرُّوحَ، وَيُؤْمَرُ بِأَرْبَعِ كَلِمَاتٍ: بِكَتْبِ رِزْقِهِ، وَأَجَلِهِ، وَعَمَلِهِ، وَشَقِيٍّ أَمْ سَعِيدٍ",
       translation:
         "The creation of each one of you is brought together in his mother's womb for forty days as a nutfah (drop), then he becomes an 'alaqah (clot) for a similar period, then a mudghah (lump of flesh) for a similar period. Then the angel is sent to him and he breathes the soul into him, and he is commanded with four matters: to write down his provision, his lifespan, his deeds, and whether he will be wretched or happy.",
     },
@@ -979,7 +1003,7 @@ export default function AzkarApp() {
       id: "h6",
       number: 6,
       arabic:
-        "إنَّ الْحَلَالَ بَيِّنٌ، وَإِنَّ الْحَرَامَ بَيِّنٌ، وَبَيْنَهُمَا أُمُورٌ مُشْتَبِهَاتٌ لَا يَعْلَمُهُنَّ كَثِيرٌ مِنْ النَّاسِ، فَمَنْ اتَّقَى الشُّبُهَاتِ فَقْد اسْتَبْرَأَ لِدِينِهِ وَعِرْضِهِ، وَمَنْ وَقَعَ فِي الشُّبُهَاتِ وَقَعَ فِي الْحَرَامِ، كَالرَّاعِي يَرْعَى حَوْلَ الْحِمَى يُوشِكُ أَنْ يَرْتَعَ فِيهِ، أَلَا وَإِنَّ لِكُلِّ مَلِكٍ حِمَى، أَلَا وَإِنَّ حِمَى اللَّهِ مَحَارِمُهُ",
+        "إِنَّ الْحَلَالَ بَيِّنٌ، وَإِنَّ الْحَرَامَ بَيِّنٌ، وَبَيْنَهُمَا أُمُورٌ مُشْتَبِهَاتٌ لَا يَعْلَمُهُنَّ كَثِيرٌ مِنْ النَّاسِ، فَمَنْ اتَّقَى الشُّبُهَاتِ فَقْد اسْتَبْرَأَ لِدِينِهِ وَعِرْضِهِ، وَمَنْ وَقَعَ فِي الشُّبُهَاتِ وَقَعَ فِي الْحَرَامِ، كَالرَّاعِي يَرْعَى حَوْلَ الْحِمَى يُوشِكُ أَنْ يَرْتَعَ فِيهِ، أَلَا وَإِنَّ لِكُلِّ مَلِكٍ حِمَى، أَلَا وَإِنَّ حِمَى اللَّهِ مَحَارِمُهُ",
       translation:
         "That which is lawful is clear and that which is unlawful is clear, and between them are doubtful matters about which many people do not know. Thus, he who avoids doubtful matters clears himself in regard to his religion and his honor. But he who falls into doubtful matters falls into that which is unlawful, like a shepherd who pastures around a sanctuary, all but grazing therein. Indeed, every king has a sanctuary, and indeed, Allah's sanctuary is His prohibitions.",
     },
@@ -1174,7 +1198,8 @@ export default function AzkarApp() {
     {
       id: "h34",
       number: 34,
-      arabic: "مَنْ رَأَى مِنْكُمْ مُنْكَرًا فَلْيُغَيِّرْهُ بِيَدِهِ، فَإِنْ لَمْ يَسْتَطِعْ فَبِلِسَانِهِ، فَإِنْ لَمْ يَسْتَطِعْ فَبِقَلْبِهِ، وَذَلِكَ أَضْعَفُ الْإِيمَانِ",
+      arabic:
+        "مَنْ رَأَى مِنْكُمْ مُنْكَرًا فَلْيُغَيِّرْهُ بِيَدِهِ، فَإِنْ لَمْ يَسْتَطِعْ فَبِلِسَانِهِ، فَإِنْ لَمْ يَسْتَطِعْ فَبِقَلْبِهِ، وَذَلِكَ أَضْعَفُ الْإِيمَانِ",
       translation:
         "Whoever among you sees an evil, let him change it with his hand. If he is unable to do so, then with his tongue. If he is unable to do so, then with his heart, and that is the weakest of faith.",
     },
@@ -1288,6 +1313,70 @@ export default function AzkarApp() {
     })
   }
 
+  const playDuaaAudio = (duaaId: string, arabicText: string) => {
+    if (!arabicVoiceAvailable) {
+      console.error("Arabic voice not available")
+      return
+    }
+
+    if (playingDuaaId === duaaId) {
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel()
+      }
+      speechSynthesisRef.current = null
+      setPlayingDuaaId(null)
+      return
+    }
+
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel()
+    }
+    speechSynthesisRef.current = null
+
+    setPlayingDuaaId(duaaId)
+
+    // Start playing new duaa
+    const utterance = new SpeechSynthesisUtterance(arabicText)
+
+    let arabicVoice = null
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      const voices = window.speechSynthesis.getVoices()
+      // Try to find a female Arabic voice first
+      arabicVoice = voices.find((voice) => voice.lang.startsWith("ar") && voice.name.toLowerCase().includes("female"))
+      // Fallback to any Arabic voice if no female voice found
+      if (!arabicVoice) {
+        arabicVoice = voices.find((voice) => voice.lang.startsWith("ar"))
+      }
+      if (arabicVoice) {
+        utterance.voice = arabicVoice
+      }
+    }
+
+    utterance.lang = "ar-SA"
+    utterance.rate = 0.8
+    utterance.pitch = 1
+
+    utterance.onend = () => {
+      if (speechSynthesisRef.current === utterance) {
+        setPlayingDuaaId(null)
+        speechSynthesisRef.current = null
+      }
+    }
+
+    utterance.onerror = (event) => {
+      if (speechSynthesisRef.current === utterance && event.error !== "interrupted") {
+        setPlayingDuaaId(null)
+        speechSynthesisRef.current = null
+        console.error("[v0] Error playing Duaa audio:", event.error)
+      }
+    }
+
+    speechSynthesisRef.current = utterance
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.speak(utterance)
+    }
+  }
+
   const markHadithAsRead = (hadithId: string) => {
     setReadHadith((prev) => {
       const newSet = new Set(prev)
@@ -1394,7 +1483,8 @@ export default function AzkarApp() {
       adhanAudioRef.current.pause()
       setIsPlayingAdhan(false)
     } else {
-      adhanAudioRef.current.play()
+      adhanAudioRef.current
+        .play()
         .then(() => {
           setIsPlayingAdhan(true)
         })
@@ -1404,6 +1494,16 @@ export default function AzkarApp() {
           alert("Failed to play Adhan audio. Please try again.")
         })
     }
+  }
+
+  // Added formatTime function to handle prayer times, useful for countdown display if needed
+  const formatTime = (time: string) => {
+    if (!time) return ""
+
+    const [hours, minutes] = time.split(":").map(Number)
+    const period = hours >= 12 ? "PM" : "AM"
+    const hours12 = hours % 12 || 12
+    return `${hours12}:${minutes.toString().padStart(2, "0")} ${period}`
   }
 
   return (
@@ -1501,14 +1601,31 @@ export default function AzkarApp() {
                 >
                   <div className="p-5">
                     <div className="flex justify-between items-start mb-4">
-                      <span
-                        className={`text-sm font-semibold px-3 py-1 rounded-full ${
-                          isCompleted ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-sm font-semibold px-3 py-1 rounded-full ${
+                            isCompleted ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          #{index + 1}
+                        </span>
+                        {isCompleted && <span className="text-green-500 text-sm font-semibold">✓ Completed</span>}
+                      </div>
+                      <button
+                        onClick={() => playDuaaAudio(dhikr.id, dhikr.arabic)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          playingDuaaId === dhikr.id
+                            ? "bg-gradient-to-r " + currentCategory.color + " text-white"
+                            : "bg-gray-100 hover:bg-gray-200 text-gray-600"
                         }`}
+                        title={playingDuaaId === dhikr.id ? "Stop audio" : "Play audio"}
                       >
-                        #{index + 1}
-                      </span>
-                      {isCompleted && <span className="text-green-500 text-sm font-semibold">✓ Completed</span>}
+                        {playingDuaaId === dhikr.id ? (
+                          <VolumeX className="w-5 h-5" />
+                        ) : (
+                          <Volume2 className="w-5 h-5" />
+                        )}
+                      </button>
                     </div>
 
                     <div className="text-right mb-4">
@@ -1587,14 +1704,16 @@ export default function AzkarApp() {
                 >
                   <div className="p-5">
                     <div className="flex justify-between items-start mb-4">
-                      <span
-                        className={`text-sm font-semibold px-3 py-1 rounded-full ${
-                          isRead ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        الحديث #{hadith.number}
-                      </span>
-                      {isRead && <span className="text-emerald-500 text-sm font-semibold">✓ Read</span>}
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-sm font-semibold px-3 py-1 rounded-full ${
+                            isRead ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          الحديث #{hadith.number}
+                        </span>
+                        {isRead && <span className="text-emerald-500 text-sm font-semibold">✓ Read</span>}
+                      </div>
                     </div>
 
                     <div className="text-right mb-4">
@@ -1976,9 +2095,7 @@ export default function AzkarApp() {
                             <h4 className={`font-semibold ${isNext ? "text-blue-800" : "text-gray-800"}`}>
                               {prayer.name}
                             </h4>
-                            {isNext && (
-                              <p className="text-xs text-blue-600 font-medium">Next Prayer - {countdown}</p>
-                            )}
+                            {isNext && <p className="text-xs text-blue-600 font-medium">Next Prayer - {countdown}</p>}
                           </div>
                         </div>
                         <div className="text-right">
@@ -1996,6 +2113,7 @@ export default function AzkarApp() {
         </div>
       )}
 
+      {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4">
         <div className="max-w-md mx-auto bg-white rounded-2xl shadow-2xl border border-gray-200">
           <div className="flex items-center justify-around px-2 py-2">
