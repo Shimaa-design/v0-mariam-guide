@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { Moon, Sun, BookOpen, Heart, Clock, Home, Utensils, CloudRain, Car, Frown, Smile, BookMarked, DoorOpen, AlertCircle, List, Loader2, Volume2, Pause, VolumeX } from 'lucide-react'
+import { Moon, Sun, BookOpen, Heart, Clock, Home, Utensils, CloudRain, Car, Frown, Smile, BookMarked, DoorOpen, AlertCircle, List, Loader2, Volume2, Pause, VolumeX, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface QuranVerse {
   number: number
@@ -57,6 +57,7 @@ export default function AzkarApp() {
 
   // Prayer times state
   const [prayerTimes, setPrayerTimes] = useState<PrayerTimes | null>(null)
+  const [prayerTimesCache, setPrayerTimesCache] = useState<Record<string, PrayerTimes>>({})
   const [location, setLocation] = useState<LocationData | null>(null)
   const [isLoadingPrayer, setIsLoadingPrayer] = useState(false)
   const [prayerError, setPrayerError] = useState<string | null>(null)
@@ -303,6 +304,14 @@ export default function AzkarApp() {
     const fetchLocationAndPrayer = async () => {
       if (mainTab !== "pray") return
 
+      // Check cache first
+      const dateKey = selectedDate.toDateString()
+      if (prayerTimesCache[dateKey]) {
+        setPrayerTimes(prayerTimesCache[dateKey])
+        setIsLoadingPrayer(false)
+        return
+      }
+
       setIsLoadingPrayer(true)
       setPrayerError(null)
 
@@ -358,14 +367,21 @@ export default function AzkarApp() {
 
         if (prayerData.code === 200) {
           const timings = prayerData.data.timings
-          setPrayerTimes({
+          const newPrayerTimes = {
             Fajr: timings.Fajr,
             Dhuhr: timings.Dhuhr,
             Asr: timings.Asr,
             Maghrib: timings.Maghrib,
             Isha: timings.Isha,
             Jumuah: timings.Dhuhr, // Jumuah (Friday prayer) is at Dhuhr time
-          })
+          }
+          setPrayerTimes(newPrayerTimes)
+
+          // Cache the prayer times for this date
+          setPrayerTimesCache(prev => ({
+            ...prev,
+            [dateKey]: newPrayerTimes
+          }))
         } else {
           throw new Error("Failed to fetch prayer times")
         }
@@ -1496,6 +1512,22 @@ export default function AzkarApp() {
     )
   }
 
+  const goToPreviousDay = () => {
+    const newDate = new Date(selectedDate)
+    newDate.setDate(selectedDate.getDate() - 1)
+    setSelectedDate(newDate)
+  }
+
+  const goToNextDay = () => {
+    const newDate = new Date(selectedDate)
+    newDate.setDate(selectedDate.getDate() + 1)
+    setSelectedDate(newDate)
+  }
+
+  const goToToday = () => {
+    setSelectedDate(new Date())
+  }
+
   const toggleAdhan = () => {
     if (!adhanAudioRef.current) {
       // Create audio element if it doesn't exist
@@ -2190,6 +2222,37 @@ export default function AzkarApp() {
                     </div>
                   )
                 })}
+              </div>
+
+              {/* Bottom Date Navigation */}
+              <div className="mt-6 mb-4">
+                <div className="flex items-center justify-between gap-3">
+                  {/* Previous Day Button */}
+                  <button
+                    onClick={goToPreviousDay}
+                    className="flex items-center justify-center w-12 h-12 bg-white border-2 border-blue-300 text-blue-600 rounded-full shadow-md hover:bg-blue-50 hover:shadow-lg transition-all active:scale-95"
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+
+                  {/* Today Button (only show when not on today) */}
+                  {!isSameDay(selectedDate, new Date()) && (
+                    <button
+                      onClick={goToToday}
+                      className="flex-1 py-3 px-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all active:scale-95"
+                    >
+                      Today
+                    </button>
+                  )}
+
+                  {/* Next Day Button */}
+                  <button
+                    onClick={goToNextDay}
+                    className="flex items-center justify-center w-12 h-12 bg-white border-2 border-blue-300 text-blue-600 rounded-full shadow-md hover:bg-blue-50 hover:shadow-lg transition-all active:scale-95"
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                </div>
               </div>
             </>
           ) : null}
