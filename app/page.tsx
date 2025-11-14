@@ -2122,7 +2122,7 @@ export default function AzkarApp() {
             <>
               {/* Week Navigation Bar */}
               <div className="mb-6 mt-6">
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide pl-0.5 pt-0.5 pb-4">
                   {getWeekDates().map((date, index) => {
                     const isSelected = isSameDay(date, selectedDate)
                     const isToday = isSameDay(date, new Date())
