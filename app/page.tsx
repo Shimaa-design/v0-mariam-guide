@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Moon, Sun, BookOpen, Heart, Clock, Home, Utensils, CloudRain, Car, Frown, Smile, BookMarked, DoorOpen, AlertCircle, List, Loader2, Volume2, Pause, VolumeX, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface QuranVerse {
@@ -90,8 +90,9 @@ export default function AzkarApp() {
       console.log("[v0] Fetched surah list successfully")
 
       const allSurahs: QuranSurah[] = []
-      const BATCH_SIZE = 3
-      const BATCH_DELAY = 2000
+      // Optimized for mobile: increased batch size, reduced delay for faster loading
+      const BATCH_SIZE = 10
+      const BATCH_DELAY = 500
       const totalSurahs = surahListData.data.length
 
       const fetchWithRetry = async (url: string, retries = 3, delay = 1000): Promise<Response> => {
@@ -233,12 +234,10 @@ export default function AzkarApp() {
       }
     }
 
-    // Load cached Quran data
+    // Load cached Quran data only (don't fetch on mount for better mobile performance)
     const cachedQuranData = localStorage.getItem("mariam-guide-quran-data")
     const cachedVersion = localStorage.getItem("mariam-guide-quran-cache-version")
     const CACHE_VERSION = "v1"
-
-    let cacheLoaded = false
 
     if (cachedQuranData && cachedVersion === CACHE_VERSION) {
       try {
@@ -246,7 +245,6 @@ export default function AzkarApp() {
         if (Array.isArray(parsedData) && parsedData.length > 0) {
           console.log("[v0] Loading Quran data from cache...")
           setQuranData(parsedData)
-          cacheLoaded = true
           console.log(`[v0] Successfully loaded ${parsedData.length} surahs from cache`)
         }
       } catch (error) {
@@ -256,11 +254,16 @@ export default function AzkarApp() {
         localStorage.removeItem("mariam-guide-quran-cache-version")
       }
     }
+    // Note: Quran data will be fetched lazily when user switches to Quran tab
+  }, []) // Empty dependency array means this runs once on mount
 
-    if (!cacheLoaded && quranData.length === 0) {
+  // Lazy load Quran data when user switches to Quran tab (performance optimization for mobile)
+  useEffect(() => {
+    if (mainTab === "quran" && quranData.length === 0 && !isLoadingQuran) {
+      console.log("[v0] User switched to Quran tab, fetching data...")
       fetchQuranData()
     }
-  }, []) // Empty dependency array means this runs once on mount
+  }, [mainTab, quranData.length, isLoadingQuran, fetchQuranData])
 
   useEffect(() => {
     localStorage.setItem("mariam-guide-duaa-counts", JSON.stringify(counts))
@@ -1273,7 +1276,11 @@ export default function AzkarApp() {
     },
   ]
 
-  const currentCategory = azkarData[selectedCategory as keyof typeof azkarData]
+  // Memoize current category to avoid recalculation on every render (mobile performance)
+  const currentCategory = useMemo(() =>
+    azkarData[selectedCategory as keyof typeof azkarData],
+    [selectedCategory]
+  )
 
   const CategoryIcon = mainTab === "duaa" ? currentCategory.icon : mainTab === "hadith" ? BookOpen : BookMarked
 
