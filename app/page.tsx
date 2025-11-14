@@ -25,6 +25,7 @@ interface PrayerTimes {
   Asr: string
   Maghrib: string
   Isha: string
+  Jumuah: string
 }
 
 interface LocationData {
@@ -369,6 +370,7 @@ export default function AzkarApp() {
             Asr: timings.Asr,
             Maghrib: timings.Maghrib,
             Isha: timings.Isha,
+            Jumuah: timings.Dhuhr, // Jumuah (Friday prayer) is at Dhuhr time
           })
         } else {
           throw new Error("Failed to fetch prayer times")
@@ -398,6 +400,7 @@ export default function AzkarApp() {
       const prayers = [
         { name: "Fajr", time: prayerTimes.Fajr },
         { name: "Dhuhr", time: prayerTimes.Dhuhr },
+        { name: "Jumuah", time: prayerTimes.Jumuah },
         { name: "Asr", time: prayerTimes.Asr },
         { name: "Maghrib", time: prayerTimes.Maghrib },
         { name: "Isha", time: prayerTimes.Isha },
@@ -2085,6 +2088,7 @@ export default function AzkarApp() {
                 {[
                   { name: "Fajr", time: prayerTimes.Fajr, icon: "🌅" },
                   { name: "Dhuhr", time: prayerTimes.Dhuhr, icon: "☀️" },
+                  { name: "Jumuah", time: prayerTimes.Jumuah, icon: "🕌" },
                   { name: "Asr", time: prayerTimes.Asr, icon: "🌤️" },
                   { name: "Maghrib", time: prayerTimes.Maghrib, icon: "🌆" },
                   { name: "Isha", time: prayerTimes.Isha, icon: "🌙" },
