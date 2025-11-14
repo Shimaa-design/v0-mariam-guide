@@ -388,7 +388,7 @@ export default function AzkarApp() {
 
     const updateCountdown = () => {
       const now = new Date()
-      const currentTime = now.getHours() * 60 + now.getMinutes()
+      const currentTimeInSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()
       const isFriday = now.getDay() === 5 // 5 = Friday
 
       const prayers = [
@@ -399,33 +399,34 @@ export default function AzkarApp() {
         { name: "Isha", time: prayerTimes.Isha },
       ]
 
-      // Convert prayer times to minutes
-      const prayerMinutes = prayers.map((p) => {
+      // Convert prayer times to seconds
+      const prayerSeconds = prayers.map((p) => {
         const [hours, minutes] = p.time.split(":").map(Number)
-        return { ...p, minutes: hours * 60 + minutes }
+        return { ...p, seconds: hours * 3600 + minutes * 60 }
       })
 
       // Find next prayer
-      let next = prayerMinutes.find((p) => p.minutes > currentTime)
+      let next = prayerSeconds.find((p) => p.seconds > currentTimeInSeconds)
 
       if (!next) {
         // Next prayer is Fajr tomorrow
-        next = { ...prayerMinutes[0], minutes: prayerMinutes[0].minutes + 24 * 60 }
+        next = { ...prayerSeconds[0], seconds: prayerSeconds[0].seconds + 24 * 3600 }
       }
 
       setNextPrayer({ name: next.name, time: next.time })
 
       // Calculate countdown
-      let diff = next.minutes - currentTime
-      if (diff < 0) diff += 24 * 60
+      let diffInSeconds = next.seconds - currentTimeInSeconds
+      if (diffInSeconds < 0) diffInSeconds += 24 * 3600
 
-      const hours = Math.floor(diff / 60)
-      const minutes = diff % 60
-      setCountdown(`${hours}h ${minutes}m`)
+      const hours = Math.floor(diffInSeconds / 3600)
+      const minutes = Math.floor((diffInSeconds % 3600) / 60)
+      const seconds = diffInSeconds % 60
+      setCountdown(`${hours}h ${minutes}m ${seconds}s`)
     }
 
     updateCountdown()
-    const interval = setInterval(updateCountdown, 60000) // Update every minute
+    const interval = setInterval(updateCountdown, 1000) // Update every second
 
     return () => clearInterval(interval)
   }, [prayerTimes, mainTab])
