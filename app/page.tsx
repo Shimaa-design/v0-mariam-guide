@@ -62,6 +62,7 @@ export default function AzkarApp() {
   const [prayerError, setPrayerError] = useState<string | null>(null)
   const [nextPrayer, setNextPrayer] = useState<{ name: string; time: string } | null>(null)
   const [countdown, setCountdown] = useState<string>("")
+  const [showJumuah, setShowJumuah] = useState(false)
 
   // Adhan audio state
   const [isPlayingAdhan, setIsPlayingAdhan] = useState(false)
@@ -396,11 +397,14 @@ export default function AzkarApp() {
     const updateCountdown = () => {
       const now = new Date()
       const currentTime = now.getHours() * 60 + now.getMinutes()
-      const isFriday = now.getDay() === 5
+      const todayIsFriday = now.getDay() === 5
+
+      // Update Friday state if it changed
+      setShowJumuah(todayIsFriday)
 
       const prayers = [
         { name: "Fajr", time: prayerTimes.Fajr },
-        { name: isFriday ? "Jumuah" : "Dhuhr", time: isFriday ? prayerTimes.Jumuah : prayerTimes.Dhuhr },
+        { name: todayIsFriday ? "Jumuah" : "Dhuhr", time: todayIsFriday ? prayerTimes.Jumuah : prayerTimes.Dhuhr },
         { name: "Asr", time: prayerTimes.Asr },
         { name: "Maghrib", time: prayerTimes.Maghrib },
         { name: "Isha", time: prayerTimes.Isha },
@@ -2085,16 +2089,13 @@ export default function AzkarApp() {
                     </button>
                   </div>
                 </div>
-                {(() => {
-                  const isFriday = new Date().getDay() === 5
-                  return [
-                    { name: "Fajr", time: prayerTimes.Fajr, icon: "🌅" },
-                    { name: isFriday ? "Jumuah" : "Dhuhr", time: isFriday ? prayerTimes.Jumuah : prayerTimes.Dhuhr, icon: isFriday ? "🕌" : "☀️" },
-                    { name: "Asr", time: prayerTimes.Asr, icon: "🌤️" },
-                    { name: "Maghrib", time: prayerTimes.Maghrib, icon: "🌆" },
-                    { name: "Isha", time: prayerTimes.Isha, icon: "🌙" },
-                  ]
-                })().map((prayer) => {
+                {[
+                  { name: "Fajr", time: prayerTimes.Fajr, icon: "🌅" },
+                  { name: showJumuah ? "Jumuah" : "Dhuhr", time: showJumuah ? prayerTimes.Jumuah : prayerTimes.Dhuhr, icon: showJumuah ? "🕌" : "☀️" },
+                  { name: "Asr", time: prayerTimes.Asr, icon: "🌤️" },
+                  { name: "Maghrib", time: prayerTimes.Maghrib, icon: "🌆" },
+                  { name: "Isha", time: prayerTimes.Isha, icon: "🌙" },
+                ].map((prayer) => {
                   const isNext = nextPrayer?.name === prayer.name
                   return (
                     <div
