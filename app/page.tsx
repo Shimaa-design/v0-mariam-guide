@@ -2121,7 +2121,7 @@ export default function AzkarApp() {
           ) : prayerTimes && location ? (
             <>
               {/* Week Navigation Bar */}
-              <div className="mb-6 mt-6">
+              <div className="mb-6 pt-8 px-6 pb-6">
                 <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
                   {getWeekDates().map((date, index) => {
                     const isSelected = isSameDay(date, selectedDate)
