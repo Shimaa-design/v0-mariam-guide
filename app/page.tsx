@@ -389,11 +389,11 @@ export default function AzkarApp() {
     const updateCountdown = () => {
       const now = new Date()
       const currentTime = now.getHours() * 60 + now.getMinutes()
+      const isFriday = now.getDay() === 5 // 5 = Friday
 
       const prayers = [
         { name: "Fajr", time: prayerTimes.Fajr },
-        { name: "Dhuhr", time: prayerTimes.Dhuhr },
-        { name: "Jumuah", time: prayerTimes.Jumuah },
+        { name: isFriday ? "Jumuah" : "Dhuhr", time: isFriday ? prayerTimes.Jumuah : prayerTimes.Dhuhr },
         { name: "Asr", time: prayerTimes.Asr },
         { name: "Maghrib", time: prayerTimes.Maghrib },
         { name: "Isha", time: prayerTimes.Isha },
@@ -2078,14 +2078,20 @@ export default function AzkarApp() {
                     </button>
                   </div>
                 </div>
-                {[
-                  { name: "Fajr", time: prayerTimes.Fajr, icon: "🌅" },
-                  { name: "Dhuhr", time: prayerTimes.Dhuhr, icon: "☀️" },
-                  { name: "Jumuah", time: prayerTimes.Jumuah, icon: "🕌" },
-                  { name: "Asr", time: prayerTimes.Asr, icon: "🌤️" },
-                  { name: "Maghrib", time: prayerTimes.Maghrib, icon: "🌆" },
-                  { name: "Isha", time: prayerTimes.Isha, icon: "🌙" },
-                ].map((prayer) => {
+                {(() => {
+                  const now = new Date()
+                  const isFriday = now.getDay() === 5 // 5 = Friday
+
+                  return [
+                    { name: "Fajr", time: prayerTimes.Fajr, icon: "🌅" },
+                    isFriday
+                      ? { name: "Jumuah", time: prayerTimes.Jumuah, icon: "🕌" }
+                      : { name: "Dhuhr", time: prayerTimes.Dhuhr, icon: "☀️" },
+                    { name: "Asr", time: prayerTimes.Asr, icon: "🌤️" },
+                    { name: "Maghrib", time: prayerTimes.Maghrib, icon: "🌆" },
+                    { name: "Isha", time: prayerTimes.Isha, icon: "🌙" },
+                  ]
+                })().map((prayer) => {
                   const isNext = nextPrayer?.name === prayer.name
                   return (
                     <div
