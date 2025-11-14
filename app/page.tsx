@@ -62,6 +62,7 @@ export default function AzkarApp() {
   const [prayerError, setPrayerError] = useState<string | null>(null)
   const [nextPrayer, setNextPrayer] = useState<{ name: string; time: string } | null>(null)
   const [countdown, setCountdown] = useState<string>("")
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
 
   // Adhan audio state
   const [isPlayingAdhan, setIsPlayingAdhan] = useState(false)
@@ -300,7 +301,7 @@ export default function AzkarApp() {
   // Fetch location and prayer times
   useEffect(() => {
     const fetchLocationAndPrayer = async () => {
-      if (mainTab !== "pray" || prayerTimes) return
+      if (mainTab !== "pray") return
 
       setIsLoadingPrayer(true)
       setPrayerError(null)
@@ -349,9 +350,9 @@ export default function AzkarApp() {
           throw new Error("Failed to get location")
         }
 
-        const date = new Date()
+        // Use selectedDate instead of current date
         const prayerResponse = await fetch(
-          `https://api.aladhan.com/v1/timings/${Math.floor(date.getTime() / 1000)}?latitude=${locationInfo.latitude}&longitude=${locationInfo.longitude}&method=2`,
+          `https://api.aladhan.com/v1/timings/${Math.floor(selectedDate.getTime() / 1000)}?latitude=${locationInfo.latitude}&longitude=${locationInfo.longitude}&method=2`,
         )
         const prayerData = await prayerResponse.json()
 
@@ -380,11 +381,20 @@ export default function AzkarApp() {
     }
 
     fetchLocationAndPrayer()
-  }, [mainTab, prayerTimes])
+  }, [mainTab, selectedDate])
 
   // Calculate next prayer and countdown
   useEffect(() => {
     if (!prayerTimes || mainTab !== "pray") return
+
+    // Only calculate countdown if selected date is today
+    const isSelectedToday = isSameDay(selectedDate, new Date())
+
+    if (!isSelectedToday) {
+      setNextPrayer(null)
+      setCountdown("")
+      return
+    }
 
     const updateCountdown = () => {
       const now = new Date()
@@ -429,7 +439,7 @@ export default function AzkarApp() {
     const interval = setInterval(updateCountdown, 1000) // Update every second
 
     return () => clearInterval(interval)
-  }, [prayerTimes, mainTab])
+  }, [prayerTimes, mainTab, selectedDate])
 
   useEffect(() => {
     const checkVoices = () => {
@@ -1459,6 +1469,33 @@ export default function AzkarApp() {
     return `${hours12}:${minutes.toString().padStart(2, "0")} ${period}`
   }
 
+  // Generate a week of dates starting from today
+  const getWeekDates = () => {
+    const dates = []
+    const today = new Date()
+    today.setHours(0, 0, 0, 0) // Reset time to start of day
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today)
+      date.setDate(today.getDate() + i)
+      dates.push(date)
+    }
+    return dates
+  }
+
+  const formatDayName = (date: Date) => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    return days[date.getDay()]
+  }
+
+  const isSameDay = (date1: Date, date2: Date) => {
+    return (
+      date1.getFullYear() === date2.getFullYear() &&
+      date1.getMonth() === date2.getMonth() &&
+      date1.getDate() === date2.getDate()
+    )
+  }
+
   const toggleAdhan = () => {
     if (!adhanAudioRef.current) {
       // Create audio element if it doesn't exist
@@ -2044,12 +2081,44 @@ export default function AzkarApp() {
             </div>
           ) : prayerTimes && location ? (
             <>
+              {/* Week Navigation Bar */}
+              <div className="mb-6 mt-6">
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+                  {getWeekDates().map((date, index) => {
+                    const isSelected = isSameDay(date, selectedDate)
+                    const isToday = isSameDay(date, new Date())
+                    return (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedDate(date)}
+                        className={`flex flex-col items-center justify-center min-w-[60px] py-3 px-2 rounded-xl transition-all ${
+                          isSelected
+                            ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg scale-105"
+                            : isToday
+                            ? "bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-700 border-2 border-blue-300"
+                            : "bg-white text-gray-600 border border-gray-200 hover:border-blue-300 hover:bg-blue-50"
+                        }`}
+                      >
+                        <span className={`text-xs font-medium mb-1 ${isSelected ? "text-blue-100" : isToday ? "text-blue-600" : "text-gray-500"}`}>
+                          {formatDayName(date)}
+                        </span>
+                        <span className={`text-lg font-bold ${isSelected ? "text-white" : isToday ? "text-blue-700" : "text-gray-800"}`}>
+                          {date.getDate()}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
               {/* Prayer Times List */}
               <div className="space-y-3">
-                <div className="mb-4 mt-6">
+                <div className="mb-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-800">Today's Prayer Times</h3>
+                      <h3 className="text-lg font-semibold text-gray-800">
+                        {isSameDay(selectedDate, new Date()) ? "Today's" : formatDayName(selectedDate) + "'s"} Prayer Times
+                      </h3>
                       <p className="text-sm text-gray-600 mt-1">
                         {location.city}, {location.country}
                       </p>
@@ -2080,8 +2149,7 @@ export default function AzkarApp() {
                   </div>
                 </div>
                 {(() => {
-                  const now = new Date()
-                  const isFriday = now.getDay() === 5 // 5 = Friday
+                  const isFriday = selectedDate.getDay() === 5 // 5 = Friday
 
                   return [
                     { name: "Fajr", time: prayerTimes.Fajr, icon: "🌅" },
