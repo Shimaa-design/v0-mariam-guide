@@ -1794,12 +1794,23 @@ export default function AzkarApp() {
                 <>
                   {isFriday() && (
                     <div className="mb-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl">🕌</span>
-                        <div>
-                          <p className="font-semibold text-amber-900">It&apos;s Friday!</p>
-                          <p className="text-sm text-amber-800">It's recommended to recite Surah Al-Kahf today</p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl">🕌</span>
+                          <div>
+                            <p className="font-semibold text-amber-900">It&apos;s Friday!</p>
+                            <p className="text-sm text-amber-800">It's recommended to recite Surah Al-Kahf today</p>
+                          </div>
                         </div>
+                        <button
+                          onClick={() => {
+                            const kahfSurah = quranData.find(s => s.number === 18)
+                            if (kahfSurah) openSurah(kahfSurah)
+                          }}
+                          className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium text-sm transition-colors whitespace-nowrap"
+                        >
+                          Start Reading
+                        </button>
                       </div>
                     </div>
                   )}
