@@ -2226,32 +2226,58 @@ export default function AzkarApp() {
 
               {/* Bottom Date Navigation */}
               <div className="mt-6 mb-4">
-                <div className="flex items-center justify-between gap-3">
-                  {/* Previous Day Button */}
-                  <button
-                    onClick={goToPreviousDay}
-                    className="flex items-center justify-center w-12 h-12 bg-white border-2 border-blue-300 text-blue-600 rounded-full shadow-md hover:bg-blue-50 hover:shadow-lg transition-all active:scale-95"
-                  >
-                    <ChevronLeft className="w-6 h-6" />
-                  </button>
+                <div className="flex items-center justify-center gap-3">
+                  {/* Previous Day Button - hide if at first day (today) */}
+                  {(() => {
+                    const today = new Date()
+                    today.setHours(0, 0, 0, 0)
+                    const isAtStart = isSameDay(selectedDate, today)
+
+                    if (isAtStart) {
+                      return <div className="w-12" /> // Spacer to maintain layout
+                    }
+
+                    return (
+                      <button
+                        onClick={goToPreviousDay}
+                        className="flex items-center justify-center w-12 h-12 bg-white border-2 border-blue-300 text-blue-600 rounded-full shadow-md hover:bg-blue-50 hover:shadow-lg transition-all active:scale-95"
+                      >
+                        <ChevronLeft className="w-6 h-6" />
+                      </button>
+                    )
+                  })()}
 
                   {/* Today Button (only show when not on today) */}
                   {!isSameDay(selectedDate, new Date()) && (
                     <button
                       onClick={goToToday}
-                      className="flex-1 py-3 px-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all active:scale-95"
+                      className="py-3 px-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all active:scale-95"
                     >
                       Today
                     </button>
                   )}
 
-                  {/* Next Day Button */}
-                  <button
-                    onClick={goToNextDay}
-                    className="flex items-center justify-center w-12 h-12 bg-white border-2 border-blue-300 text-blue-600 rounded-full shadow-md hover:bg-blue-50 hover:shadow-lg transition-all active:scale-95"
-                  >
-                    <ChevronRight className="w-6 h-6" />
-                  </button>
+                  {/* Next Day Button - hide if at last day (6 days from today) */}
+                  {(() => {
+                    const today = new Date()
+                    today.setHours(0, 0, 0, 0)
+                    const lastDay = new Date(today)
+                    lastDay.setDate(today.getDate() + 6)
+                    const isAtEnd = isSameDay(selectedDate, lastDay)
+
+                    if (isAtEnd) {
+                      return <div className="w-12" /> // Spacer to maintain layout
+                    }
+
+                    return (
+                      <button
+                        onClick={goToNextDay}
+                        className="flex items-center justify-center w-12 h-12 bg-white border-2 border-blue-300 text-blue-600 rounded-full shadow-md hover:bg-blue-50 hover:shadow-lg transition-all active:scale-95"
+                      >
+                        <ChevronRight className="w-6 h-6" />
+                      </button>
+                    )
+                  })()}
                 </div>
               </div>
             </>
