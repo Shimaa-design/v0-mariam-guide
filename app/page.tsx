@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Moon, Sun, BookOpen, Heart, Clock, Home, Utensils, CloudRain, Car, Frown, Smile, BookMarked, DoorOpen, AlertCircle, List, Loader2, Volume2, Pause, VolumeX } from 'lucide-react'
 
 interface QuranVerse {
@@ -70,6 +70,138 @@ export default function AzkarApp() {
   const [playingDuaaId, setPlayingDuaaId] = useState<string | null>(null)
   const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null)
   const [arabicVoiceAvailable, setArabicVoiceAvailable] = useState(false);
+
+  // Define fetchQuranData function at component level so it can be accessed by multiple useEffects
+  const fetchQuranData = useCallback(async () => {
+    setIsLoadingQuran(true)
+    setQuranError(null)
+    setLoadingProgress(0)
+
+    try {
+      console.log("[v0] Starting to fetch Quran data...")
+
+      const surahListResponse = await fetch("https://api.alquran.cloud/v1/surah")
+      if (!surahListResponse.ok) {
+        throw new Error(`Failed to fetch surah list: ${surahListResponse.status}`)
+      }
+      const surahListData = await surahListResponse.json()
+      console.log("[v0] Fetched surah list successfully")
+
+      const allSurahs: QuranSurah[] = []
+      const BATCH_SIZE = 3
+      const BATCH_DELAY = 2000
+      const totalSurahs = surahListData.data.length
+
+      const fetchWithRetry = async (url: string, retries = 3, delay = 1000): Promise<Response> => {
+        for (let i = 0; i < retries; i++) {
+          try {
+            const response = await fetch(url)
+            if (response.ok) return response
+
+            if (response.status === 429 || response.status >= 500) {
+              console.log(`[v0] Retry ${i + 1}/${retries} for ${url} (status: ${response.status})`)
+              await new Promise((resolve) => setTimeout(resolve, delay * Math.pow(2, i)))
+              continue
+            }
+
+            throw new Error(`HTTP ${response.status}`)
+          } catch (error) {
+            if (i === retries - 1) throw error
+            console.log(`[v0] Retry ${i + 1}/${retries} after error:`, error)
+            await new Promise((resolve) => setTimeout(resolve, delay * Math.pow(2, i)))
+          }
+        }
+        throw new Error("Max retries reached")
+      }
+
+      for (let i = 0; i < totalSurahs; i += BATCH_SIZE) {
+        const batch = surahListData.data.slice(i, Math.min(i + BATCH_SIZE, totalSurahs))
+
+        console.log(
+          `[v0] Fetching batch ${Math.floor(i / BATCH_SIZE) + 1} (surahs ${i + 1}-${Math.min(i + BATCH_SIZE, totalSurahs)})`,
+        )
+
+        const batchPromises = batch.map(async (surahInfo: any) => {
+          const surahNumber = surahInfo.number
+
+          try {
+            const arabicResponse = await fetchWithRetry(
+              `https://api.alquran.cloud/v1/surah/${surahNumber}/ar.alafasy`,
+            )
+            const arabicData = await arabicResponse.json()
+
+            await new Promise((resolve) => setTimeout(resolve, 300))
+
+            const englishResponse = await fetchWithRetry(`https://api.alquran.cloud/v1/surah/${surahNumber}/en.asad`)
+            const englishData = await englishResponse.json()
+
+            const verses: QuranVerse[] = arabicData.data.ayahs.map((ayah: any, index: number) => {
+              const verse: QuranVerse = {
+                number: ayah.numberInSurah,
+                arabic: ayah.text,
+                english: englishData.data.ayahs[index].text,
+              }
+
+              if (surahNumber === 2 && ayah.numberInSurah === 255) {
+                verse.isSpecial = true
+                verse.specialName = "آية الكرسي"
+              }
+
+              return verse
+            })
+
+            const surah: QuranSurah = {
+              number: surahNumber,
+              name: surahInfo.name,
+              englishName: surahInfo.englishName,
+              verses,
+              hasSpecialReminder: surahNumber === 18,
+            }
+
+            console.log(`[v0] Successfully fetched surah ${surahNumber}`)
+            return surah
+          } catch (error) {
+            console.error(`[v0] Error fetching surah ${surahNumber}:`, error)
+            throw new Error(
+              `Failed to fetch surah ${surahNumber}: ${error instanceof Error ? error.message : "Unknown error"}`,
+            )
+          }
+        })
+
+        const batchResults = await Promise.all(batchPromises)
+        allSurahs.push(...batchResults)
+
+        const progress = Math.round((allSurahs.length / totalSurahs) * 100)
+        setLoadingProgress(progress)
+        console.log(`[v0] Progress: ${progress}% (${allSurahs.length}/${totalSurahs} surahs)`)
+
+        if (i + BATCH_SIZE < totalSurahs) {
+          console.log(`[v0] Waiting ${BATCH_DELAY}ms before next batch...`)
+          await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY))
+        }
+      }
+
+      console.log("[v0] Successfully fetched all surahs")
+      setQuranData(allSurahs)
+
+      // Cache the Quran data
+      try {
+        const CACHE_VERSION = "v1"
+        localStorage.setItem("mariam-guide-quran-data", JSON.stringify(allSurahs))
+        localStorage.setItem("mariam-guide-quran-cache-version", CACHE_VERSION)
+        console.log("[v0] Quran data cached successfully")
+      } catch (error) {
+        console.error("[v0] Failed to cache Quran data:", error)
+        // Continue even if caching fails
+      }
+
+      setIsLoadingQuran(false)
+    } catch (error) {
+      console.error("[v0] Error fetching Quran data:", error)
+      setQuranError(error instanceof Error ? error.message : "Failed to load Quran data")
+      setIsLoadingQuran(false)
+    }
+  }, [])
 
   useEffect(() => {
     const savedCounts = localStorage.getItem("mariam-guide-duaa-counts")
@@ -164,145 +296,6 @@ export default function AzkarApp() {
       setQuranView("list")
     }
   }, [mainTab])
-
-  useEffect(() => {
-    const fetchQuranData = async () => {
-      setIsLoadingQuran(true)
-      setQuranError(null)
-      setLoadingProgress(0)
-
-      try {
-        console.log("[v0] Starting to fetch Quran data...")
-
-        const surahListResponse = await fetch("https://api.alquran.cloud/v1/surah")
-        if (!surahListResponse.ok) {
-          throw new Error(`Failed to fetch surah list: ${surahListResponse.status}`)
-        }
-        const surahListData = await surahListResponse.json()
-        console.log("[v0] Fetched surah list successfully")
-
-        const allSurahs: QuranSurah[] = []
-        const BATCH_SIZE = 3
-        const BATCH_DELAY = 2000
-        const totalSurahs = surahListData.data.length
-
-        const fetchWithRetry = async (url: string, retries = 3, delay = 1000): Promise<Response> => {
-          for (let i = 0; i < retries; i++) {
-            try {
-              const response = await fetch(url)
-              if (response.ok) return response
-
-              if (response.status === 429 || response.status >= 500) {
-                console.log(`[v0] Retry ${i + 1}/${retries} for ${url} (status: ${response.status})`)
-                await new Promise((resolve) => setTimeout(resolve, delay * Math.pow(2, i)))
-                continue
-              }
-
-              throw new Error(`HTTP ${response.status}`)
-            } catch (error) {
-              if (i === retries - 1) throw error
-              console.log(`[v0] Retry ${i + 1}/${retries} after error:`, error)
-              await new Promise((resolve) => setTimeout(resolve, delay * Math.pow(2, i)))
-            }
-          }
-          throw new Error("Max retries reached")
-        }
-
-        for (let i = 0; i < totalSurahs; i += BATCH_SIZE) {
-          const batch = surahListData.data.slice(i, Math.min(i + BATCH_SIZE, totalSurahs))
-
-          console.log(
-            `[v0] Fetching batch ${Math.floor(i / BATCH_SIZE) + 1} (surahs ${i + 1}-${Math.min(i + BATCH_SIZE, totalSurahs)})`,
-          )
-
-          const batchPromises = batch.map(async (surahInfo: any) => {
-            const surahNumber = surahInfo.number
-
-            try {
-              const arabicResponse = await fetchWithRetry(
-                `https://api.alquran.cloud/v1/surah/${surahNumber}/ar.alafasy`,
-              )
-              const arabicData = await arabicResponse.json()
-
-              await new Promise((resolve) => setTimeout(resolve, 300))
-
-              const englishResponse = await fetchWithRetry(`https://api.alquran.cloud/v1/surah/${surahNumber}/en.asad`)
-              const englishData = await englishResponse.json()
-
-              const verses: QuranVerse[] = arabicData.data.ayahs.map((ayah: any, index: number) => {
-                const verse: QuranVerse = {
-                  number: ayah.numberInSurah,
-                  arabic: ayah.text,
-                  english: englishData.data.ayahs[index].text,
-                }
-
-                if (surahNumber === 2 && ayah.numberInSurah === 255) {
-                  verse.isSpecial = true
-                  verse.specialName = "آية الكرسي"
-                }
-
-                return verse
-              })
-
-              const surah: QuranSurah = {
-                number: surahNumber,
-                name: surahInfo.name,
-                englishName: surahInfo.englishName,
-                verses,
-                hasSpecialReminder: surahNumber === 18,
-              }
-
-              console.log(`[v0] Successfully fetched surah ${surahNumber}`)
-              return surah
-            } catch (error) {
-              console.error(`[v0] Error fetching surah ${surahNumber}:`, error)
-              throw new Error(
-                `Failed to fetch surah ${surahNumber}: ${error instanceof Error ? error.message : "Unknown error"}`,
-              )
-            }
-          })
-
-          const batchResults = await Promise.all(batchPromises)
-          allSurahs.push(...batchResults)
-
-          const progress = Math.round((allSurahs.length / totalSurahs) * 100)
-          setLoadingProgress(progress)
-          console.log(`[v0] Progress: ${progress}% (${allSurahs.length}/${totalSurahs} surahs)`)
-
-          if (i + BATCH_SIZE < totalSurahs) {
-            console.log(`[v0] Waiting ${BATCH_DELAY}ms before next batch...`)
-            await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY))
-          }
-        }
-
-        console.log("[v0] Successfully fetched all surahs")
-        setQuranData(allSurahs)
-
-        // Cache the Quran data
-        try {
-          const CACHE_VERSION = "v1"
-          localStorage.setItem("mariam-guide-quran-data", JSON.stringify(allSurahs))
-          localStorage.setItem("mariam-guide-quran-cache-version", CACHE_VERSION)
-          console.log("[v0] Quran data cached successfully")
-        } catch (error) {
-          console.error("[v0] Failed to cache Quran data:", error)
-          // Continue even if caching fails
-        }
-
-        setIsLoadingQuran(false)
-      } catch (error) {
-        console.error("[v0] Error fetching Quran data:", error)
-        setQuranError(error instanceof Error ? error.message : "Failed to load Quran data")
-        setIsLoadingQuran(false)
-      }
-    }
-
-    // The logic for when to call fetchQuranData has been moved up to the first useEffect
-    // to correctly handle cache loading. This block remains for clarity but the condition is now handled above.
-    if (quranData.length === 0) {
-      // fetchQuranData() // This is now handled by the first useEffect
-    }
-  }, []) // Empty dependency array means this runs once on mount
 
   // Fetch location and prayer times
   useEffect(() => {
