@@ -1671,15 +1671,15 @@ export default function AzkarApp() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pb-24">
       <div
-        className={`bg-gradient-to-r ${mainTab === "duaa" ? currentCategory.color : mainTab === "hadith" ? "from-teal-500 to-emerald-600" : mainTab === "pray" ? "from-blue-500 to-indigo-600" : "from-purple-500 to-indigo-600"} text-white p-6 shadow-lg`}
+        className={`bg-gradient-to-r py-4 ${mainTab === "duaa" ? currentCategory.color : mainTab === "hadith" ? "from-teal-500 to-emerald-600" : mainTab === "pray" ? "from-blue-500 to-indigo-600" : "from-purple-500 to-indigo-600"} text-white p-6 shadow-lg`}
       >
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 mb-2">
-            {mainTab === "duaa" && <currentCategory.icon className="w-8 h-8" />}
-            {mainTab === "hadith" && <BookOpen className="w-8 h-8" />}
-            {mainTab === "quran" && <BookMarked className="w-8 h-8" />}
-            {mainTab === "pray" && <Clock className="w-8 h-8" />}
-            <h1 className="text-3xl font-bold">Mariam Guide</h1>
+          <div className="flex items-center gap-3 mb-0">
+            {mainTab === "duaa" && <currentCategory.icon className="w-7 h-7" />}
+            {mainTab === "hadith" && <BookOpen className="w-7 h-7" />}
+            {mainTab === "quran" && <BookMarked className="w-7 h-7" />}
+            {mainTab === "pray" && <Clock className="w-7 h-7" />}
+            <h1 className="font-bold text-2xl">Mariam Guide</h1>
           </div>
           <p className="text-white/90">
             {mainTab === "duaa" && currentCategory.title}
@@ -1762,7 +1762,7 @@ export default function AzkarApp() {
                   }`}
                 >
                   <div className="p-5">
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex justify-between mb-4 items-center">
                       <div className="flex items-center gap-2">
                         <span
                           className={`text-sm font-semibold px-3 py-1 rounded-full ${
@@ -1865,7 +1865,7 @@ export default function AzkarApp() {
                   }`}
                 >
                   <div className="p-5">
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex justify-between mb-4 items-center">
                       <div className="flex items-center gap-2">
                         <span
                           className={`text-sm font-semibold px-3 py-1 rounded-full ${
@@ -1882,14 +1882,14 @@ export default function AzkarApp() {
                       <p className="text-xl leading-loose text-gray-800">{hadith.arabic}</p>
                     </div>
 
-                    <div className="pt-4 border-t border-gray-200 mb-6">
+                    <div className="pt-4 border-t border-gray-200 mb-4">
                       <p className="text-sm text-gray-700 leading-relaxed">{hadith.translation}</p>
                     </div>
 
                     <div className="flex justify-end">
                       <button
                         onClick={() => markHadithAsRead(hadith.id)}
-                        className={`px-6 py-2 rounded-lg font-medium transition-all ${
+                        className={`py-2 font-medium transition-all rounded-full px-5 text-sm ${
                           isRead
                             ? "bg-gray-200 text-gray-600 hover:bg-gray-300"
                             : "bg-gradient-to-r from-teal-500 to-emerald-500 text-white hover:shadow-lg active:scale-95"
@@ -1904,7 +1904,7 @@ export default function AzkarApp() {
             })}
           </div>
 
-          <div className="mt-8 p-4 bg-emerald-50 rounded-lg">
+          <div className="mt-8 p-4 bg-emerald-50 rounded-lg border-solid border border-emerald-600">
             <p className="text-sm text-emerald-800 text-center">
               الأربعون النووية - Imam An-Nawawi&apos;s 40 Hadith Collection 📚
             </p>
@@ -1955,7 +1955,7 @@ export default function AzkarApp() {
               {quranView === "list" && (
                 <>
                   {isFriday() && (
-                    <div className="mb-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-l-4 border-amber-500 rounded-lg">
+                    <div className="mb-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-500 rounded-lg border-r border-b border-t border-l">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-2xl">🕌</span>
@@ -2012,7 +2012,7 @@ export default function AzkarApp() {
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-lg flex items-center justify-center font-bold text-lg">
+                              <div className="bg-gradient-to-br from-purple-500 to-indigo-500 text-white rounded-lg flex items-center justify-center font-bold text-lg w-11 h-11">
                                 {surah.number}
                               </div>
                               <div className="text-right">
@@ -2052,13 +2052,13 @@ export default function AzkarApp() {
                       <span>Back to Surahs</span>
                     </button>
 
-                    <div className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white p-5 rounded-xl shadow-lg">
+                    <div className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white p-5 rounded-xl shadow-lg py-2 px-2 pr-4">
                       <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center font-bold text-xl">
+                        <div className="bg-white/20 backdrop-blur rounded-lg flex items-center justify-center font-bold text-xl size-12">
                           {selectedSurah.number}
                         </div>
                         <div className="text-right flex-1">
-                          <h2 className="text-2xl font-bold">{selectedSurah.name}</h2>
+                          <h2 className="font-bold text-xl">{selectedSurah.name}</h2>
                           <p className="text-white/90 text-sm">{selectedSurah.verses.length} verses</p>
                         </div>
                       </div>
@@ -2079,7 +2079,7 @@ export default function AzkarApp() {
                             if (el) ayahRefs.current[ayahKey] = el
                           }}
                           onClick={() => handleAyahClick(index)}
-                          className={`p-5 rounded-xl transition-all cursor-pointer ${
+                          className={`p-5 rounded-xl transition-all cursor-pointer py-4 px-4 ${
                             isAyatAlKursi
                               ? "bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-300 hover:border-amber-400"
                               : isBookmarked
@@ -2096,7 +2096,7 @@ export default function AzkarApp() {
                           )}
 
                           <div className="flex items-center justify-between mb-4">
-                            <span className="text-sm font-semibold text-gray-600 bg-gray-100 px-3 py-1 rounded-full">
+                            <span className="text-sm font-semibold text-gray-600 bg-gray-100 px-3 py-1 rounded-full border-none border-0">
                               Ayah {verse.number}
                             </span>
                             <button
@@ -2120,7 +2120,7 @@ export default function AzkarApp() {
                             </p>
                           </div>
 
-                          <div className="pt-4 border-t border-gray-200">
+                          <div className="border-t border-gray-200 pt-3">
                             <p className="text-sm text-gray-700 leading-relaxed">{verse.english}</p>
                           </div>
                         </div>
@@ -2182,7 +2182,7 @@ export default function AzkarApp() {
       )}
 
       {mainTab === "pray" && (
-        <div className="pb-32 px-4 max-w-md mx-auto">
+        <div className="px-4 max-w-md mx-auto pb-32">
           {isLoadingPrayer ? (
             <div className="flex flex-col items-center justify-center py-20">
               <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />
@@ -2211,7 +2211,7 @@ export default function AzkarApp() {
             <>
               {/* Week Navigation Bar */}
               <div className="mb-6 mt-6">
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide pl-0.5 pr-0.5 pt-0.5 pb-4">
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide pl-0.5 pr-0.5 pt-0.5 pb-0.5">
                   {getWeekDates().map((date, index) => {
                     const isSelected = isSameDay(date, selectedDate)
                     const isToday = isSameDay(date, new Date())
@@ -2221,7 +2221,7 @@ export default function AzkarApp() {
                         key={index}
                         ref={(el) => { dayButtonRefs.current[dateKey] = el }}
                         onClick={() => setSelectedDate(date)}
-                        className={`flex flex-col items-center justify-center min-w-[60px] py-3 px-2 rounded-xl transition-all ${
+                        className={`flex flex-col items-center justify-center min-w-[60px] py-3 px-2 rounded-xl transition-all shadow-none ${
                           isSelected
                             ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg scale-105"
                             : isToday
@@ -2295,7 +2295,7 @@ export default function AzkarApp() {
                   return (
                     <div
                       key={prayer.name}
-                      className={`p-4 rounded-xl transition-all ${
+                      className={`p-4 rounded-xl transition-all py-3 ${
                         isNext
                           ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 shadow-md"
                           : "bg-white shadow-md hover:shadow-lg"
@@ -2312,7 +2312,7 @@ export default function AzkarApp() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className={`text-xl font-bold ${isNext ? "text-blue-700" : "text-gray-700"}`}>
+                          <p className={`font-bold text-lg ${isNext ? "text-blue-700" : "text-gray-700"}`}>
                             {convertTo12Hour(prayer.time)}
                           </p>
                         </div>
@@ -2339,7 +2339,7 @@ export default function AzkarApp() {
                       return (
                         <button
                           onClick={goToPreviousDay}
-                          className="flex items-center justify-center w-12 h-12 bg-white border-2 border-blue-300 text-blue-600 rounded-full shadow-md hover:bg-blue-50 hover:shadow-lg transition-all active:scale-95"
+                          className="flex items-center justify-center w-12 h-12 bg-white border-2 border-blue-300 text-blue-600 rounded-full shadow-md hover:bg-blue-50 hover:shadow-lg transition-all active:scale-95 border-none"
                         >
                           <ChevronLeft className="w-6 h-6" />
                         </button>
@@ -2360,7 +2360,7 @@ export default function AzkarApp() {
                   </div>
 
                   {/* Next Day Button - hide if at last day (6 days from today) */}
-                  <div className="flex justify-end">
+                  <div className="flex justify-end border-none">
                     {(() => {
                       const today = new Date()
                       today.setHours(0, 0, 0, 0)
@@ -2375,7 +2375,7 @@ export default function AzkarApp() {
                       return (
                         <button
                           onClick={goToNextDay}
-                          className="flex items-center justify-center w-12 h-12 bg-white border-2 border-blue-300 text-blue-600 rounded-full shadow-md hover:bg-blue-50 hover:shadow-lg transition-all active:scale-95"
+                          className="flex items-center justify-center w-12 h-12 bg-white border-2 border-blue-300 text-blue-600 rounded-full shadow-md hover:bg-blue-50 hover:shadow-lg transition-all active:scale-95 border-none"
                         >
                           <ChevronRight className="w-6 h-6" />
                         </button>
@@ -2399,7 +2399,7 @@ export default function AzkarApp() {
                 mainTab === "duaa" ? "bg-gradient-to-br from-teal-50 to-emerald-50" : "hover:bg-gray-50"
               }`}
             >
-              <Heart className={`w-6 h-6 mb-1 ${mainTab === "duaa" ? "text-teal-600" : "text-gray-400"}`} />
+              <Heart className={`mb-1 h-4 w-4 ${mainTab === "duaa" ? "text-teal-600" : "text-gray-400"}`} />
               <span className={`text-xs font-semibold ${mainTab === "duaa" ? "text-teal-600" : "text-gray-500"}`}>
                 Duaa
               </span>
@@ -2411,7 +2411,7 @@ export default function AzkarApp() {
                 mainTab === "hadith" ? "bg-gradient-to-br from-teal-50 to-emerald-50" : "hover:bg-gray-50"
               }`}
             >
-              <BookOpen className={`w-6 h-6 mb-1 ${mainTab === "hadith" ? "text-teal-600" : "text-gray-400"}`} />
+              <BookOpen className={`mb-1 w-4 h-4 ${mainTab === "hadith" ? "text-teal-600" : "text-gray-400"}`} />
               <span className={`text-xs font-semibold ${mainTab === "hadith" ? "text-teal-600" : "text-gray-500"}`}>
                 Hadith
               </span>
@@ -2423,7 +2423,7 @@ export default function AzkarApp() {
                 mainTab === "quran" ? "bg-gradient-to-br from-purple-50 to-indigo-50" : "hover:bg-gray-50"
               }`}
             >
-              <BookMarked className={`w-6 h-6 mb-1 ${mainTab === "quran" ? "text-purple-600" : "text-gray-400"}`} />
+              <BookMarked className={`mb-1 h-4 w-4 ${mainTab === "quran" ? "text-purple-600" : "text-gray-400"}`} />
               <span className={`text-xs font-semibold ${mainTab === "quran" ? "text-purple-600" : "text-gray-500"}`}>
                 Quran
               </span>
@@ -2431,11 +2431,11 @@ export default function AzkarApp() {
 
             <button
               onClick={() => setMainTab("pray")}
-              className={`flex flex-col items-center justify-center flex-1 py-2 px-3 rounded-xl transition-all ${
+              className={`flex flex-col items-center justify-center flex-1 px-3 rounded-xl transition-all py-2 ${
                 mainTab === "pray" ? "bg-gradient-to-br from-blue-50 to-indigo-50" : "hover:bg-gray-50"
               }`}
             >
-              <Clock className={`w-6 h-6 mb-1 ${mainTab === "pray" ? "text-blue-600" : "text-gray-400"}`} />
+              <Clock className={`mb-1 w-4 h-4 ${mainTab === "pray" ? "text-blue-600" : "text-gray-400"}`} />
               <span className={`text-xs font-semibold ${mainTab === "pray" ? "text-blue-600" : "text-gray-500"}`}>
                 Pray
               </span>
