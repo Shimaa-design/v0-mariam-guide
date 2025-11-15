@@ -58,7 +58,7 @@ export default function AzkarApp() {
 
   // Prayer times state
   const [prayerTimes, setPrayerTimes] = useState<PrayerTimes | null>(null)
-  const [prayerTimesCache, setPrayerTimesCache] = useState<Record<string, PrayerTimes>>({})
+  const prayerTimesCache = useRef<Record<string, PrayerTimes>>({})
   const [location, setLocation] = useState<LocationData | null>(null)
   const [isLoadingPrayer, setIsLoadingPrayer] = useState(false)
   const [prayerError, setPrayerError] = useState<string | null>(null)
@@ -318,9 +318,8 @@ export default function AzkarApp() {
 
       // Check cache first
       const dateKey = selectedDate.toDateString()
-      if (prayerTimesCache[dateKey]) {
-        setPrayerTimes(prayerTimesCache[dateKey])
-        setIsLoadingPrayer(false)
+      if (prayerTimesCache.current[dateKey]) {
+        setPrayerTimes(prayerTimesCache.current[dateKey])
         return
       }
 
@@ -390,10 +389,7 @@ export default function AzkarApp() {
           setPrayerTimes(newPrayerTimes)
 
           // Cache the prayer times for this date
-          setPrayerTimesCache(prev => ({
-            ...prev,
-            [dateKey]: newPrayerTimes
-          }))
+          prayerTimesCache.current[dateKey] = newPrayerTimes
         } else {
           throw new Error("Failed to fetch prayer times")
         }
@@ -2147,7 +2143,7 @@ export default function AzkarApp() {
             <>
               {/* Week Navigation Bar */}
               <div className="mb-6 mt-6">
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide pl-0.5 pt-0.5 pb-4">
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide pl-0.5 pr-0.5 pt-0.5 pb-4">
                   {getWeekDates().map((date, index) => {
                     const isSelected = isSameDay(date, selectedDate)
                     const isToday = isSameDay(date, new Date())
