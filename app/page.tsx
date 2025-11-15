@@ -917,13 +917,13 @@ export default function AzkarApp() {
                     )}
                   </div>
 
-                  {/* Next Day Button - hide if at last day (6 days from today) */}
+                  {/* Next Day Button - hide if at last day (7 days from today) */}
                   <div className="flex justify-end border-none">
                     {(() => {
                       const today = new Date()
                       today.setHours(0, 0, 0, 0)
                       const lastDay = new Date(today)
-                      lastDay.setDate(today.getDate() + 6)
+                      lastDay.setDate(today.getDate() + 7)
                       const isAtEnd = isSameDay(selectedDate, lastDay)
 
                       if (isAtEnd) {
