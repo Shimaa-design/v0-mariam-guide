@@ -54,6 +54,7 @@ export default function AzkarApp() {
   const [loadingProgress, setLoadingProgress] = useState(0)
   const dhikrRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const ayahRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const dayButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
   // Prayer times state
   const [prayerTimes, setPrayerTimes] = useState<PrayerTimes | null>(null)
@@ -467,6 +468,22 @@ export default function AzkarApp() {
 
     return () => clearInterval(interval)
   }, [prayerTimes, mainTab, selectedDate])
+
+  // Scroll selected day into view in week navigation
+  useEffect(() => {
+    if (mainTab !== "pray") return
+
+    const dateKey = selectedDate.toDateString()
+    const selectedButton = dayButtonRefs.current[dateKey]
+
+    if (selectedButton) {
+      selectedButton.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center"
+      })
+    }
+  }, [selectedDate, mainTab])
 
   useEffect(() => {
     const checkVoices = () => {
@@ -2134,9 +2151,11 @@ export default function AzkarApp() {
                   {getWeekDates().map((date, index) => {
                     const isSelected = isSameDay(date, selectedDate)
                     const isToday = isSameDay(date, new Date())
+                    const dateKey = date.toDateString()
                     return (
                       <button
                         key={index}
+                        ref={(el) => { dayButtonRefs.current[dateKey] = el }}
                         onClick={() => setSelectedDate(date)}
                         className={`flex flex-col items-center justify-center min-w-[60px] py-3 px-2 rounded-xl transition-all ${
                           isSelected
