@@ -1758,7 +1758,7 @@ export default function AzkarApp() {
                     if (el) dhikrRefs.current[dhikr.id] = el
                   }}
                   className={`bg-white rounded-xl shadow-md overflow-hidden transition-all ${
-                    isCompleted ? "ring-2 ring-green-400" : ""
+                    isCompleted ? "ring-2 ring-green-500" : ""
                   }`}
                 >
                   <div className="p-5">
@@ -1861,7 +1861,7 @@ export default function AzkarApp() {
                 <div
                   key={hadith.id}
                   className={`bg-white rounded-xl shadow-md overflow-hidden transition-all ${
-                    isRead ? "ring-2 ring-emerald-400" : ""
+                    isRead ? "ring-2 ring-emerald-500" : ""
                   }`}
                 >
                   <div className="p-5 py-4 px-4">
@@ -1869,7 +1869,7 @@ export default function AzkarApp() {
                       <div className="flex items-center gap-2">
                         <span
                           className={`text-sm font-semibold px-3 py-1 rounded-full ${
-                            isRead ? "bg-emerald-100 text-emerald-400" : "bg-gray-100 text-gray-600"
+                            isRead ? "bg-emerald-100 text-emerald-600" : "bg-gray-100 text-gray-600"
                           }`}
                         >
                           الحديث #{hadith.number}
@@ -1904,7 +1904,7 @@ export default function AzkarApp() {
             })}
           </div>
 
-          <div className="mt-8 p-4 bg-emerald-50 rounded-lg border-solid border border-emerald-600">
+          <div className="mt-8 p-4 bg-emerald-50 rounded-lg border-solid border border-emerald-400">
             <p className="text-sm text-emerald-800 text-center">
               الأربعون النووية - Imam An-Nawawi&apos;s 40 Hadith Collection 📚
             </p>
