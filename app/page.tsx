@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
-import { Moon, Sun, BookOpen, Heart, Clock, Home, Utensils, CloudRain, Car, Frown, Smile, BookMarked, DoorOpen, AlertCircle, List, Loader2, Volume2, Pause, VolumeX, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Moon, Sun, BookOpen, Heart, Clock, Home, Utensils, CloudRain, Car, Frown, Smile, BookMarked, DoorOpen, AlertCircle, List, Loader2, Volume2, Pause, VolumeX, ChevronLeft, ChevronRight, Play } from 'lucide-react'
 
 interface QuranVerse {
   number: number
@@ -34,6 +34,14 @@ interface LocationData {
   latitude: number
   longitude: number
 }
+
+const RECITERS = [
+  { id: "ar.alafasy", name: "Mishary Rashid Alafasy", arabicName: "مشاري راشد العفاسي" },
+  { id: "ar.abdulbasitmurattal", name: "Abdul Basit (Murattal)", arabicName: "عبد الباسط عبد الصمد" },
+  { id: "ar.minshawi", name: "Mohamed Siddiq Minshawi", arabicName: "محمد صديق المنشاوي" },
+  { id: "ar.husary", name: "Mahmoud Khalil Al-Hussary", arabicName: "محمود خليل الحصري" },
+  { id: "ar.shaatree", name: "Abu Bakr Al-Shatri", arabicName: "أبو بكر الشاطري" },
+]
 
 export default function AzkarApp() {
   const [mainTab, setMainTab] = useState("duaa")
@@ -75,6 +83,12 @@ export default function AzkarApp() {
   // Adhan audio state
   const [isPlayingAdhan, setIsPlayingAdhan] = useState(false)
   const adhanAudioRef = useRef<HTMLAudioElement | null>(null)
+
+  const quranAudioRef = useRef<HTMLAudioElement | null>(null)
+  const [selectedReciter, setSelectedReciter] = useState(RECITERS[0].id)
+  const [playingAudioType, setPlayingAudioType] = useState<"surah" | "ayah" | null>(null)
+  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null)
+  const [showReciterDropdown, setShowReciterDropdown] = useState(false)
 
   const [playingDuaaId, setPlayingDuaaId] = useState<string | null>(null)
   const speechSynthesisRef = useRef<SpeechSynthesisUtterance | null>(null)
@@ -303,22 +317,6 @@ export default function AzkarApp() {
       fetchQuranData()
     }
   }, [mainTab, quranData.length, isLoadingQuran, fetchQuranData])
-
-  useEffect(() => {
-    // Save current scroll position before switching
-    const saveScrollPosition = () => {
-      const currentScroll = window.scrollY
-      setScrollPositions(prev => ({
-        ...prev,
-        [mainTab]: currentScroll
-      }))
-    }
-
-    // Save scroll position on tab change
-    return () => {
-      saveScrollPosition()
-    }
-  }, [mainTab])
 
   useEffect(() => {
     // Small delay to ensure DOM is rendered
@@ -634,7 +632,7 @@ export default function AzkarApp() {
   const navigateCategory = (direction: 'next' | 'prev') => {
     const categories = Object.keys(azkarData)
     const currentIndex = categories.indexOf(selectedCategory)
-    
+
     if (direction === 'next' && currentIndex < categories.length - 1) {
       setSelectedCategory(categories[currentIndex + 1])
       scrollCategoryIntoView(categories[currentIndex + 1])
@@ -676,22 +674,22 @@ export default function AzkarApp() {
 
   const onTouchEnd = () => {
     if (mainTab !== 'duaa' || !touchStart || !touchEnd) return
-    
+
     const distance = touchStart - touchEnd
     const swipeTime = Date.now() - swipeStartTime.current
     const velocity = Math.abs(distance) / swipeTime
-    
+
     const isLeftSwipe = distance > minSwipeDistance || (distance > 20 && velocity > minSwipeVelocity)
     const isRightSwipe = distance < -minSwipeDistance || (distance < -20 && velocity > minSwipeVelocity)
 
     setIsTransitioning(true)
-    
+
     if (isLeftSwipe) {
       navigateCategory('next')
     } else if (isRightSwipe) {
       navigateCategory('prev')
     }
-    
+
     // Spring back animation
     setTimeout(() => {
       setSwipeOffset(0)
@@ -1261,7 +1259,7 @@ export default function AzkarApp() {
       id: "h9",
       number: 9,
       arabic:
-        "مَا نَهَيْتُكُمْ عَنْهُ فَاجْتَنِبُوهُ، وَمَا أَمَرْتُكُمْ بِهِ فَأْتُوا مِنْهُ مَا اسْتَطَعْتُمْ، فَإِنَّمَا أَهْلَكَ الَّذِينَ مِنْ قَبْلِكُمْ كَثْرَةُ مَسَائِلِهِمْ وَاخْتِلَافُهُمْ عَلَى أَنْبِيَائِهِمْ",
+        "مَنْ نَهَيْتُكُمْ عَنْهُ فَاجْتَنِبُوهُ، وَمَا أَمَرْتُكُمْ بِهِ فَأْتُوا مِنْهُ مَا اسْتَطَعْتُمْ، فَإِنَّمَا أَهْلَكَ الَّذِينَ مِنْ قَبْلِكُمْ كَثْرَةُ مَسَائِلِهِمْ وَاخْتِلَافُهُمْ عَلَى أَنْبِيَائِهِمْ",
       translation:
         "What I have forbidden you, avoid. What I have commanded you, do as much of it as you can. For verily, it was only the excessive questioning and their disagreeing with their Prophets that destroyed those who were before you.",
     },
@@ -1629,7 +1627,7 @@ export default function AzkarApp() {
     })
   }
 
-  const setBookmark = (surahNumber: number, ayahNumber: number) => {
+  const setBookmark = (surahNumber: number, ayahNumber: number | null) => {
     if (quranBookmark.surahNumber === surahNumber && quranBookmark.ayahNumber === ayahNumber) {
       // Remove bookmark if clicking the same ayah
       setQuranBookmark({ surahNumber: null, ayahNumber: null })
@@ -1677,10 +1675,122 @@ export default function AzkarApp() {
     }
   }
 
-  const handleAyahClick = (currentAyahIndex: number) => {
+  const playQuranAudio = (type: "surah" | "ayah", surahNumber: number, ayahNumber?: number) => {
+    // Stop if clicking the same audio
+    const audioId = type === "surah" ? `surah-${surahNumber}` : `ayah-${surahNumber}-${ayahNumber}`
+
+    if (playingAudioType === type && playingAudioId === audioId) {
+      stopQuranAudio()
+      return
+    }
+
+    // Stop any currently playing audio
+    stopQuranAudio()
+
+    // Build audio URL based on type
+    let audioUrl: string
+    if (type === "surah") {
+      // For surah, we need to get the first ayah number of that surah
+      const surah = quranData.find(s => s.number === surahNumber)
+      if (!surah || surah.verses.length === 0) return
+
+      audioUrl = `https://cdn.islamic.network/quran/audio-surah/128/${selectedReciter}/${surahNumber}.mp3`
+    } else {
+      // For individual ayah
+      const globalAyahNumber = getGlobalAyahNumber(surahNumber, ayahNumber!)
+      audioUrl = `https://cdn.islamic.network/quran/audio/128/${selectedReciter}/${globalAyahNumber}.mp3`
+    }
+
+    console.log("[v0] Playing Quran audio:", audioUrl)
+
+    const audio = new Audio(audioUrl)
+    quranAudioRef.current = audio
+    setPlayingAudioType(type)
+    setPlayingAudioId(audioId)
+
+    audio.onended = () => {
+      if (type === "ayah" && selectedSurah) {
+        const currentAyahIndex = selectedSurah.verses.findIndex(v => v.number === ayahNumber)
+        const nextAyahIndex = currentAyahIndex + 1
+        
+        if (nextAyahIndex < selectedSurah.verses.length) {
+          const nextAyah = selectedSurah.verses[nextAyahIndex]
+          
+          // Auto-scroll to next ayah
+          setTimeout(() => {
+            const nextAyahElement = document.getElementById(`ayah-${nextAyah.number}`)
+            if (nextAyahElement) {
+              nextAyahElement.scrollIntoView({ behavior: "smooth", block: "start" })
+            }
+          }, 100)
+          
+          // Auto-play next ayah
+          setTimeout(() => {
+            playQuranAudio("ayah", selectedSurah.number, nextAyah.number)
+          }, 300)
+        } else {
+          // End of surah - clear playing state
+          setPlayingAudioType(null)
+          setPlayingAudioId(null)
+        }
+      } else {
+        setPlayingAudioType(null)
+        setPlayingAudioId(null)
+      }
+    }
+
+    audio.onerror = () => {
+      console.error("[v0] Error playing Quran audio")
+      setPlayingAudioType(null)
+      setPlayingAudioId(null)
+    }
+
+    audio.play().catch((error) => {
+      console.error("[v0] Failed to play Quran audio:", error)
+      setPlayingAudioType(null)
+      setPlayingAudioId(null)
+    })
+  }
+
+  const stopQuranAudio = () => {
+    if (quranAudioRef.current) {
+      quranAudioRef.current.pause()
+      quranAudioRef.current = null
+    }
+    setPlayingAudioType(null)
+    setPlayingAudioId(null)
+  }
+
+  // Helper function to calculate global ayah number for audio API
+  const getGlobalAyahNumber = (surahNumber: number, ayahNumber: number): number => {
+    let globalNumber = 0
+
+    for (let i = 0; i < surahNumber - 1; i++) {
+      const surah = quranData[i]
+      if (surah) {
+        globalNumber += surah.verses.length
+      }
+    }
+
+    return globalNumber + ayahNumber
+  }
+
+  const handleAyahClick = (index: number) => {
     if (!selectedSurah) return
 
-    const nextAyahIndex = currentAyahIndex + 1
+    // Check if the clicked ayah is already bookmarked
+    const currentAyahNumber = selectedSurah.verses[index].number;
+    const isHighlighted = quranBookmark.surahNumber === selectedSurah.number && quranBookmark.ayahNumber === currentAyahNumber;
+
+    // Toggle bookmark if already highlighted
+    if (isHighlighted) {
+      setBookmark(selectedSurah.number, null); // Clear bookmark
+      return;
+    }
+
+    setBookmark(selectedSurah.number, currentAyahNumber); // Set new bookmark
+
+    const nextAyahIndex = index + 1
     if (nextAyahIndex < selectedSurah.verses.length) {
       const nextAyahKey = `${selectedSurah.number}-${nextAyahIndex}`
       const nextElement = ayahRefs.current[nextAyahKey]
@@ -2089,6 +2199,45 @@ export default function AzkarApp() {
             <>
               {quranView === "list" && (
                 <>
+                  <div className="mb-4 relative">
+                    <button
+                      onClick={() => setShowReciterDropdown(!showReciterDropdown)}
+                      className="w-full bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition-all flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Volume2 className="w-5 h-5 text-purple-500" />
+                        <div className="text-left">
+                          <p className="text-xs text-gray-500 font-medium">Reciter</p>
+                          <p className="text-sm font-semibold text-gray-800">
+                            {RECITERS.find(r => r.id === selectedReciter)?.name}
+                          </p>
+                        </div>
+                      </div>
+                      <ChevronLeft className={`w-5 h-5 text-gray-400 transition-transform ${showReciterDropdown ? 'rotate-90' : '-rotate-90'}`} />
+                    </button>
+
+                    {showReciterDropdown && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border-2 border-purple-200 z-20 max-h-64 overflow-y-auto">
+                        {RECITERS.map((reciter) => (
+                          <button
+                            key={reciter.id}
+                            onClick={() => {
+                              setSelectedReciter(reciter.id)
+                              setShowReciterDropdown(false)
+                              stopQuranAudio()
+                            }}
+                            className={`w-full p-4 text-left hover:bg-purple-50 transition-colors border-b border-gray-100 last:border-b-0 ${
+                              selectedReciter === reciter.id ? 'bg-purple-100' : ''
+                            }`}
+                          >
+                            <p className="font-semibold text-gray-800">{reciter.name}</p>
+                            <p className="text-sm text-gray-600 text-right">{reciter.arabicName}</p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   {isFriday() && (
                     <div className="mb-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-500 rounded-lg border-r border-b border-t border-l">
                       <div className="flex items-center justify-between">
@@ -2113,7 +2262,7 @@ export default function AzkarApp() {
                   )}
 
                   {quranBookmark.surahNumber && (
-                    <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-violet-400">
+                    <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-violet-200">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-semibold text-purple-900">Continue Reading</p>
@@ -2160,7 +2309,20 @@ export default function AzkarApp() {
                             <div className="flex items-center gap-2">
                               {hasBookmark && <span className="text-purple-500 font-semibold text-3xl">🔖</span>}
                               {isKahf && isFriday() && <span className="text-amber-500 text-sm">🕌</span>}
-                              <span className="text-gray-400 text-xl">→</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  playQuranAudio("surah", surah.number)
+                                }}
+                                className="p-2 rounded-lg bg-purple-100 hover:bg-purple-200 transition-colors"
+                              >
+                                {playingAudioType === "surah" && playingAudioId === `surah-${surah.number}` ? (
+                                  <Pause className="w-5 h-5 text-purple-600" />
+                                ) : (
+                                  <Play className="w-5 h-5 text-purple-600" />
+                                )}
+                              </button>
+                              <ChevronRight className="w-5 h-5 text-gray-400" />
                             </div>
                           </div>
                         </button>
@@ -2191,6 +2353,19 @@ export default function AzkarApp() {
                           <h2 className="font-bold text-base">{selectedSurah.name}</h2>
                           <p className="text-white/90 text-xs">{selectedSurah.verses.length} verses</p>
                         </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            playQuranAudio("surah", selectedSurah.number)
+                          }}
+                          className="bg-white/20 backdrop-blur rounded-lg flex items-center justify-center size-12 hover:bg-white/30 transition-colors"
+                        >
+                          {playingAudioType === "surah" && playingAudioId === `surah-${selectedSurah.number}` ? (
+                            <Pause className="w-5 h-5" />
+                          ) : (
+                            <Play className="w-5 h-5" />
+                          )}
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -2205,6 +2380,7 @@ export default function AzkarApp() {
                       return (
                         <div
                           key={verse.number}
+                          id={`ayah-${verse.number}`} // Added ID for scrolling to specific ayah
                           ref={(el) => {
                             if (el) ayahRefs.current[ayahKey] = el
                           }}
@@ -2226,21 +2402,36 @@ export default function AzkarApp() {
                           )}
 
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-gray-600 bg-gray-100 px-3 py-1 rounded-full border-none border-0">
-                              Ayah {verse.number}
-                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold text-gray-600 bg-gray-100 px-3 py-1 rounded-full border-none border-0">
+                                Ayah {verse.number}
+                              </span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setBookmark(selectedSurah.number, verse.number)
+                                }}
+                                className={`text-sm px-3 py-1 rounded-full transition-all ${
+                                  isBookmarked
+                                    ? "bg-purple-500 text-white"
+                                    : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                                }`}
+                              >
+                                {isBookmarked ? "🔖 Bookmarked" : "Bookmark"}
+                              </button>
+                            </div>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                setBookmark(selectedSurah.number, verse.number)
+                                playQuranAudio("ayah", selectedSurah.number, verse.number)
                               }}
-                              className={`text-sm px-3 py-1 rounded-full transition-all ${
-                                isBookmarked
-                                  ? "bg-purple-500 text-white"
-                                  : "bg-gray-200 text-gray-600 hover:bg-gray-300"
-                              }`}
+                              className="p-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 transition-colors"
                             >
-                              {isBookmarked ? "🔖 Bookmarked" : "Bookmark"}
+                              {playingAudioType === "ayah" && playingAudioId === `ayah-${selectedSurah.number}-${verse.number}` ? (
+                                <Pause className="w-4 h-4 text-purple-600" />
+                              ) : (
+                                <Play className="w-4 h-4 text-purple-600" />
+                              )}
                             </button>
                           </div>
 
