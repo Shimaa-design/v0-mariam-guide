@@ -1840,7 +1840,7 @@ export default function AzkarApp() {
             style={{
               transform: `translateX(${swipeOffset}px)`,
               transition: swipeOffset === 0 
-                ? 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' 
+                ? 'transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1)' 
                 : 'none',
               willChange: 'transform',
               touchAction: 'pan-y' // Allow vertical scrolling but intercept horizontal
