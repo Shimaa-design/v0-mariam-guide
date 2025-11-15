@@ -122,28 +122,30 @@ export default function AzkarApp() {
       console.log("[v0] Fetched surah list successfully")
 
       const allSurahs: QuranSurah[] = []
-      // Optimized for mobile: increased batch size, reduced delay for faster loading
-      const BATCH_SIZE = 10
-      const BATCH_DELAY = 500
+      // Reduced batch size and increased delay to prevent API rate limiting
+      const BATCH_SIZE = 3
+      const BATCH_DELAY = 2000
       const totalSurahs = surahListData.data.length
 
-      const fetchWithRetry = async (url: string, retries = 3, delay = 1000): Promise<Response> => {
+      const fetchWithRetry = async (url: string, retries = 5, delay = 2000): Promise<Response> => {
         for (let i = 0; i < retries; i++) {
           try {
             const response = await fetch(url)
             if (response.ok) return response
 
             if (response.status === 429 || response.status >= 500) {
-              console.log(`[v0] Retry ${i + 1}/${retries} for ${url} (status: ${response.status})`)
-              await new Promise((resolve) => setTimeout(resolve, delay * Math.pow(2, i)))
+              const backoffDelay = delay * Math.pow(2, i)
+              console.log(`[v0] Retry ${i + 1}/${retries} for ${url} (status: ${response.status}) - waiting ${backoffDelay}ms`)
+              await new Promise((resolve) => setTimeout(resolve, backoffDelay))
               continue
             }
 
             throw new Error(`HTTP ${response.status}`)
           } catch (error) {
             if (i === retries - 1) throw error
-            console.log(`[v0] Retry ${i + 1}/${retries} after error:`, error)
-            await new Promise((resolve) => setTimeout(resolve, delay * Math.pow(2, i)))
+            const backoffDelay = delay * Math.pow(2, i)
+            console.log(`[v0] Retry ${i + 1}/${retries} after error - waiting ${backoffDelay}ms:`, error)
+            await new Promise((resolve) => setTimeout(resolve, backoffDelay))
           }
         }
         throw new Error("Max retries reached")
@@ -165,7 +167,8 @@ export default function AzkarApp() {
             )
             const arabicData = await arabicResponse.json()
 
-            await new Promise((resolve) => setTimeout(resolve, 300))
+            // Increased delay between Arabic and English requests to avoid rate limiting
+            await new Promise((resolve) => setTimeout(resolve, 1000))
 
             const englishResponse = await fetchWithRetry(`https://api.alquran.cloud/v1/surah/${surahNumber}/en.asad`)
             const englishData = await englishResponse.json()
