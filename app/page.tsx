@@ -620,6 +620,7 @@ export default function AzkarApp() {
 
   const onTouchStart = (e: React.TouchEvent) => {
     if (mainTab !== 'duaa') return
+    e.preventDefault() // Prevent default touch behavior to stop background scrolling
     setTouchEnd(null)
     setTouchStart(e.targetTouches[0].clientX)
     setSwipeOffset(0)
@@ -629,6 +630,7 @@ export default function AzkarApp() {
 
   const onTouchMove = (e: React.TouchEvent) => {
     if (mainTab !== 'duaa' || isTransitioning) return
+    e.preventDefault() // Prevent default touch behavior to stop background scrolling
     const currentTouch = e.targetTouches[0].clientX
     setTouchEnd(currentTouch)
     if (touchStart) {
@@ -1821,20 +1823,7 @@ export default function AzkarApp() {
       )}
 
       {mainTab === "duaa" && (
-        <div
-          className="max-w-4xl mx-auto p-4 pb-8"
-          // Enhanced animation with spring-like easing
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-          style={{
-            transform: `translateX(${swipeOffset}px)`,
-            transition: swipeOffset === 0 
-              ? 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' 
-              : 'none',
-            willChange: 'transform'
-          }}
-        >
+        <div className="max-w-4xl mx-auto p-4 pb-8">
           <div className="mb-4 flex justify-end">
             <button
               onClick={resetCategory}
@@ -1844,95 +1833,109 @@ export default function AzkarApp() {
             </button>
           </div>
 
-          <div className="space-y-4">
-            {currentCategory.azkar.map((dhikr, index) => {
-              const currentCount = counts[dhikr.id] || 0
-              const isCompleted = completedAzkar.has(dhikr.id)
-              const progress = (currentCount / dhikr.count) * 100
+          <div
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            style={{
+              transform: `translateX(${swipeOffset}px)`,
+              transition: swipeOffset === 0 
+                ? 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' 
+                : 'none',
+              willChange: 'transform',
+              touchAction: 'pan-y' // Allow vertical scrolling but intercept horizontal
+            }}
+          >
+            <div className="space-y-4">
+              {currentCategory.azkar.map((dhikr, index) => {
+                const currentCount = counts[dhikr.id] || 0
+                const isCompleted = completedAzkar.has(dhikr.id)
+                const progress = (currentCount / dhikr.count) * 100
 
-              return (
-                <div
-                  key={dhikr.id}
-                  ref={(el) => {
-                    if (el) dhikrRefs.current[dhikr.id] = el
-                  }}
-                  className={`bg-white rounded-xl shadow-md overflow-hidden transition-all ${
-                    isCompleted ? "ring-2 ring-green-500" : ""
-                  }`}
-                >
-                  <div className="p-5 py-4 px-4">
-                    <div className="flex justify-between mb-4 items-center">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`text-sm font-semibold px-3 py-1 rounded-full ${
-                            isCompleted ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                return (
+                  <div
+                    key={dhikr.id}
+                    ref={(el) => {
+                      if (el) dhikrRefs.current[dhikr.id] = el
+                    }}
+                    className={`bg-white rounded-xl shadow-md overflow-hidden transition-all ${
+                      isCompleted ? "ring-2 ring-green-500" : ""
+                    }`}
+                  >
+                    <div className="p-5 py-4 px-4">
+                      <div className="flex justify-between mb-4 items-center">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`text-sm font-semibold px-3 py-1 rounded-full ${
+                              isCompleted ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                            }`}
+                          >
+                            #{index + 1}
+                          </span>
+                          {isCompleted && <span className="text-green-500 text-sm font-semibold">✓ Completed</span>}
+                        </div>
+                        <button
+                          onClick={() => playDuaaAudio(dhikr.id, dhikr.arabic)}
+                          className={`p-2 rounded-lg transition-colors ${
+                            playingDuaaId === dhikr.id
+                              ? "bg-gradient-to-r " + currentCategory.color + " text-white"
+                              : "bg-gray-100 hover:bg-gray-200 text-gray-600"
                           }`}
+                          title={playingDuaaId === dhikr.id ? "Stop audio" : "Play audio"}
                         >
-                          #{index + 1}
-                        </span>
-                        {isCompleted && <span className="text-green-500 text-sm font-semibold">✓ Completed</span>}
-                      </div>
-                      <button
-                        onClick={() => playDuaaAudio(dhikr.id, dhikr.arabic)}
-                        className={`p-2 rounded-lg transition-colors ${
-                          playingDuaaId === dhikr.id
-                            ? "bg-gradient-to-r " + currentCategory.color + " text-white"
-                            : "bg-gray-100 hover:bg-gray-200 text-gray-600"
-                        }`}
-                        title={playingDuaaId === dhikr.id ? "Stop audio" : "Play audio"}
-                      >
-                        {playingDuaaId === dhikr.id ? (
-                          <VolumeX className="w-5 h-5" />
-                        ) : (
-                          <Volume2 className="w-5 h-5" />
-                        )}
-                      </button>
-                    </div>
-
-                    <div className="text-right mb-4">
-                      <p className="text-xl leading-loose text-gray-800">{dhikr.arabic}</p>
-                    </div>
-
-                    <div className="pt-4 border-t border-gray-200 mb-4">
-                      <p className="text-sm text-gray-700 leading-relaxed">{dhikr.translation}</p>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                        <div
-                          className={`h-full bg-gradient-to-r ${currentCategory.color} transition-all duration-300`}
-                          style={{ width: `${progress}%` }}
-                        />
+                          {playingDuaaId === dhikr.id ? (
+                            <VolumeX className="w-5 h-5" />
+                          ) : (
+                            <Volume2 className="w-5 h-5" />
+                          )}
+                        </button>
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm text-gray-600">
-                          <span className="font-semibold text-lg text-gray-800">{currentCount}</span>
-                          <span> / {dhikr.count}</span>
+                      <div className="text-right mb-4">
+                        <p className="text-xl leading-loose text-gray-800">{dhikr.arabic}</p>
+                      </div>
+
+                      <div className="pt-4 border-t border-gray-200 mb-4">
+                        <p className="text-sm text-gray-700 leading-relaxed">{dhikr.translation}</p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                          <div
+                            className={`h-full bg-gradient-to-r ${currentCategory.color} transition-all duration-300`}
+                            style={{ width: `${progress}%` }}
+                          />
                         </div>
 
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => resetCounter(dhikr.id)}
-                            className="px-3 text-sm bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors py-2"
-                          >
-                            Reset
-                          </button>
-                          {!isCompleted && (
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm text-gray-600">
+                            <span className="font-semibold text-lg text-gray-800">{currentCount}</span>
+                            <span> / {dhikr.count}</span>
+                          </div>
+
+                          <div className="flex gap-2">
                             <button
-                              onClick={() => handleIncrement(dhikr.id, dhikr.count, index)}
-                              className={`px-6 py-2 rounded-lg font-medium transition-all bg-gradient-to-r ${currentCategory.color} text-white hover:shadow-lg active:scale-95`}
+                              onClick={() => resetCounter(dhikr.id)}
+                              className="px-3 text-sm bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors py-2"
                             >
-                              Count
+                              Reset
                             </button>
-                          )}
+                            {!isCompleted && (
+                              <button
+                                onClick={() => handleIncrement(dhikr.id, dhikr.count, index)}
+                                className={`px-6 py-2 rounded-lg font-medium transition-all bg-gradient-to-r ${currentCategory.color} text-white hover:shadow-lg active:scale-95`}
+                              >
+                                Count
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
 
           <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -2186,7 +2189,7 @@ export default function AzkarApp() {
                             </div>
                           )}
 
-                          <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center justify-between">
                             <span className="text-sm font-semibold text-gray-600 bg-gray-100 px-3 py-1 rounded-full border-none border-0">
                               Ayah {verse.number}
                             </span>
@@ -2482,7 +2485,7 @@ export default function AzkarApp() {
 
       {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4">
-        <div className="max-w-md mx-auto bg-white rounded-2xl shadow-2xl  ring-1 ring-gray-100">
+        <div className="max-w-md  mx-auto bg-white rounded-2xl shadow-2xl  ring-1 ring-gray-100">
           <div className="flex items-center justify-around px-2 py-2 ">
             <button
               onClick={() => setMainTab("duaa")}
