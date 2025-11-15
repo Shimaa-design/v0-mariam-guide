@@ -77,9 +77,12 @@ export default function AzkarApp() {
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
   const [swipeOffset, setSwipeOffset] = useState(0)
+  const [isTransitioning, setIsTransitioning] = useState(false)
   const categoryNavRef = useRef<HTMLDivElement>(null)
+  const swipeStartTime = useRef<number>(0)
 
   const minSwipeDistance = 50
+  const minSwipeVelocity = 0.3 // pixels per millisecond
 
   // Define fetchQuranData function at component level so it can be accessed by multiple useEffects
   const fetchQuranData = useCallback(async () => {
@@ -620,13 +623,16 @@ export default function AzkarApp() {
     setTouchEnd(null)
     setTouchStart(e.targetTouches[0].clientX)
     setSwipeOffset(0)
+    setIsTransitioning(false)
+    swipeStartTime.current = Date.now()
   }
 
   const onTouchMove = (e: React.TouchEvent) => {
-    if (mainTab !== 'duaa') return
+    if (mainTab !== 'duaa' || isTransitioning) return
     const currentTouch = e.targetTouches[0].clientX
     setTouchEnd(currentTouch)
     if (touchStart) {
+      // Full 1:1 movement for more responsive feel
       setSwipeOffset(currentTouch - touchStart)
     }
   }
@@ -635,16 +641,25 @@ export default function AzkarApp() {
     if (mainTab !== 'duaa' || !touchStart || !touchEnd) return
     
     const distance = touchStart - touchEnd
-    const isLeftSwipe = distance > minSwipeDistance
-    const isRightSwipe = distance < -minSwipeDistance
+    const swipeTime = Date.now() - swipeStartTime.current
+    const velocity = Math.abs(distance) / swipeTime
+    
+    const isLeftSwipe = distance > minSwipeDistance || (distance > 20 && velocity > minSwipeVelocity)
+    const isRightSwipe = distance < -minSwipeDistance || (distance < -20 && velocity > minSwipeVelocity)
 
+    setIsTransitioning(true)
+    
     if (isLeftSwipe) {
       navigateCategory('next')
     } else if (isRightSwipe) {
       navigateCategory('prev')
     }
     
-    setTimeout(() => setSwipeOffset(0), 300)
+    // Spring back animation
+    setTimeout(() => {
+      setSwipeOffset(0)
+      setTimeout(() => setIsTransitioning(false), 400)
+    }, 50)
   }
 
   const azkarData = {
@@ -1808,12 +1823,16 @@ export default function AzkarApp() {
       {mainTab === "duaa" && (
         <div
           className="max-w-4xl mx-auto p-4 pb-8"
+          // Enhanced animation with spring-like easing
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
           style={{
-            transform: `translateX(${swipeOffset * 0.3}px)`,
-            transition: swipeOffset === 0 ? 'transform 0.3s ease-out' : 'none'
+            transform: `translateX(${swipeOffset}px)`,
+            transition: swipeOffset === 0 
+              ? 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' 
+              : 'none',
+            willChange: 'transform'
           }}
         >
           <div className="mb-4 flex justify-end">
