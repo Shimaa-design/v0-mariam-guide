@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Moon, Sun, BookOpen, Heart, Clock, Home, Utensils, CloudRain, Car, Frown, Smile, BookMarked, DoorOpen, AlertCircle, List, Loader2, Volume2, Pause, VolumeX, ChevronLeft, ChevronRight, Play } from 'lucide-react'
+import { toast, Toaster } from "sonner"
 
 interface QuranVerse {
   number: number
@@ -236,8 +237,20 @@ export default function AzkarApp() {
       setIsLoadingQuran(false)
     } catch (error) {
       console.error("[v0] Error fetching Quran data:", error)
-      setQuranError(error instanceof Error ? error.message : "Failed to load Quran data")
+      const errorMessage = error instanceof Error ? error.message : "Failed to load Quran data"
+      setQuranError(errorMessage)
       setIsLoadingQuran(false)
+
+      // Show user-friendly error notification
+      if (errorMessage.includes("429") || errorMessage.includes("Too Many Requests")) {
+        toast.error("Loading Quran data... Please wait, the server is busy.", {
+          duration: 5000,
+        })
+      } else {
+        toast.error("Failed to load Quran data. Please check your internet connection.", {
+          duration: 5000,
+        })
+      }
     }
   }, [])
 
@@ -1755,6 +1768,13 @@ export default function AzkarApp() {
     audio.onerror = (e) => {
       console.error("[v0] Error playing Quran audio from URL:", audioUrl)
       console.error("[v0] Error details:", e)
+
+      // Show user-friendly error message
+      const reciterName = RECITERS.find(r => r.id === selectedReciter)?.name || "this reciter"
+      toast.error(`Unable to play audio for ${reciterName}. The audio file may not be available.`, {
+        duration: 4000,
+      })
+
       setLoadingAudioId(null)
       setPlayingAudioType(null)
       setPlayingAudioId(null)
@@ -1763,6 +1783,13 @@ export default function AzkarApp() {
     audio.play().catch((error) => {
       console.error("[v0] Failed to play Quran audio from URL:", audioUrl)
       console.error("[v0] Play error:", error)
+
+      // Show user-friendly error message
+      const reciterName = RECITERS.find(r => r.id === selectedReciter)?.name || "this reciter"
+      toast.error(`Failed to play audio for ${reciterName}. Please try another reciter.`, {
+        duration: 4000,
+      })
+
       setLoadingAudioId(null)
       setPlayingAudioType(null)
       setPlayingAudioId(null)
@@ -2788,6 +2815,7 @@ export default function AzkarApp() {
           </div>
         </div>
       </div>
+      <Toaster position="bottom-center" richColors />
     </div>
   )
 }
