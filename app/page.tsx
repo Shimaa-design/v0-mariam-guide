@@ -260,7 +260,7 @@ export default function AzkarApp() {
     const today = new Date()
     today.setHours(0, 0, 0, 0) // Reset time to start of day
 
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 8; i++) {
       const date = new Date(today)
       date.setDate(today.getDate() + i)
       dates.push(date)
