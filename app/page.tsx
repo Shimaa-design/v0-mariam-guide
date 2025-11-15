@@ -1819,17 +1819,14 @@ export default function AzkarApp() {
                           >
                             Reset
                           </button>
-                          <button
-                            onClick={() => handleIncrement(dhikr.id, dhikr.count, index)}
-                            disabled={isCompleted}
-                            className={`px-6 py-2 rounded-lg font-medium transition-all ${
-                              isCompleted
-                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                                : `bg-gradient-to-r ${currentCategory.color} text-white hover:shadow-lg active:scale-95`
-                            }`}
-                          >
-                            {isCompleted ? "Done" : "Count"}
-                          </button>
+                          {!isCompleted && (
+                            <button
+                              onClick={() => handleIncrement(dhikr.id, dhikr.count, index)}
+                              className={`px-6 py-2 rounded-lg font-medium transition-all bg-gradient-to-r ${currentCategory.color} text-white hover:shadow-lg active:scale-95`}
+                            >
+                              Count
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1978,7 +1975,7 @@ export default function AzkarApp() {
                   )}
 
                   {quranBookmark.surahNumber && (
-                    <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-violet-200">
+                    <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-violet-400">
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-semibold text-purple-900">Continue Reading</p>
@@ -2391,7 +2388,7 @@ export default function AzkarApp() {
 
       {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4">
-        <div className="max-w-md mx-auto bg-white rounded-2xl shadow-2xl border border-gray-200">
+        <div className="max-w-md<bos>mx-auto bg-white rounded-2xl shadow-2xl border border-gray-200">
           <div className="flex items-center justify-around px-2 py-2">
             <button
               onClick={() => setMainTab("duaa")}
