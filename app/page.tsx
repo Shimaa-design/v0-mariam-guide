@@ -37,6 +37,12 @@ interface LocationData {
 
 export default function AzkarApp() {
   const [mainTab, setMainTab] = useState("duaa")
+  const [scrollPositions, setScrollPositions] = useState<Record<string, number>>({
+    duaa: 0,
+    hadith: 0,
+    quran: 0,
+    pray: 0
+  })
   const [selectedCategory, setSelectedCategory] = useState("morning")
   const [counts, setCounts] = useState<Record<string, number>>({})
   const [completedAzkar, setCompletedAzkar] = useState(new Set<string>())
@@ -297,6 +303,35 @@ export default function AzkarApp() {
       fetchQuranData()
     }
   }, [mainTab, quranData.length, isLoadingQuran, fetchQuranData])
+
+  useEffect(() => {
+    // Save current scroll position before switching
+    const saveScrollPosition = () => {
+      const currentScroll = window.scrollY
+      setScrollPositions(prev => ({
+        ...prev,
+        [mainTab]: currentScroll
+      }))
+    }
+
+    // Save scroll position on tab change
+    return () => {
+      saveScrollPosition()
+    }
+  }, [mainTab])
+
+  useEffect(() => {
+    // Small delay to ensure DOM is rendered
+    const timeoutId = setTimeout(() => {
+      const savedPosition = scrollPositions[mainTab] || 0
+      window.scrollTo({
+        top: savedPosition,
+        behavior: 'instant' // Use instant to avoid jarring animation
+      })
+    }, 0)
+
+    return () => clearTimeout(timeoutId)
+  }, [mainTab, scrollPositions])
 
   useEffect(() => {
     localStorage.setItem("mariam-guide-duaa-counts", JSON.stringify(counts))
