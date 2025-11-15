@@ -1681,7 +1681,7 @@ export default function AzkarApp() {
             {mainTab === "pray" && <Clock className="w-7 h-7" />}
             <h1 className="font-bold text-2xl">Mariam Guide</h1>
           </div>
-          <p className="text-white/90">
+          <p className="text-white/90 pl-10">
             {mainTab === "duaa" && currentCategory.title}
             {mainTab === "hadith" && "الأربعون النووية"}
             {mainTab === "quran" && "Quran"}
@@ -1864,12 +1864,12 @@ export default function AzkarApp() {
                     isRead ? "ring-2 ring-emerald-400" : ""
                   }`}
                 >
-                  <div className="p-5">
+                  <div className="p-5 py-4 px-4">
                     <div className="flex justify-between mb-4 items-center">
                       <div className="flex items-center gap-2">
                         <span
                           className={`text-sm font-semibold px-3 py-1 rounded-full ${
-                            isRead ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"
+                            isRead ? "bg-emerald-100 text-emerald-400" : "bg-gray-100 text-gray-600"
                           }`}
                         >
                           الحديث #{hadith.number}
@@ -2006,7 +2006,7 @@ export default function AzkarApp() {
                         <button
                           key={surah.number}
                           onClick={() => openSurah(surah)}
-                          className={`w-full bg-white rounded-xl shadow-md p-5 hover:shadow-lg transition-all text-left ${
+                          className={`w-full bg-white rounded-xl shadow-md p-5 hover:shadow-lg transition-all text-left py-4 px-4 ${
                             isKahf && isFriday() ? "ring-2 ring-amber-400" : ""
                           }`}
                         >
@@ -2065,7 +2065,7 @@ export default function AzkarApp() {
                     </div>
                   </div>
 
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     {selectedSurah.verses.map((verse: QuranVerse, index: number) => {
                       const isBookmarked =
                         quranBookmark.surahNumber === selectedSurah.number && quranBookmark.ayahNumber === verse.number
@@ -2295,7 +2295,7 @@ export default function AzkarApp() {
                   return (
                     <div
                       key={prayer.name}
-                      className={`p-4 rounded-xl transition-all py-3 ${
+                      className={`p-4 transition-all py-3 rounded-lg shadow-md ${
                         isNext
                           ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 shadow-md"
                           : "bg-white shadow-md hover:shadow-lg"
