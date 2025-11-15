@@ -37,10 +37,10 @@ interface LocationData {
 
 const RECITERS = [
   { id: "ar.alafasy", name: "Mishary Rashid Alafasy", arabicName: "مشاري راشد العفاسي" },
-  { id: "ar.abdulbasitmurattal", name: "Abdul Basit (Murattal)", arabicName: "عبد الباسط عبد الصمد" },
+  { id: "ar.abdulbasit", name: "Abdul Basit (Murattal)", arabicName: "عبد الباسط عبد الصمد" },
   { id: "ar.minshawi", name: "Mohamed Siddiq Minshawi", arabicName: "محمد صديق المنشاوي" },
-  { id: "ar.husary", name: "Mahmoud Khalil Al-Hussary", arabicName: "محمود خليل الحصري" },
-  { id: "ar.shaatree", name: "Abu Bakr Al-Shatri", arabicName: "أبو بكر الشاطري" },
+  { id: "ar.hussary", name: "Mahmoud Khalil Al-Hussary", arabicName: "محمود خليل الحصري" },
+  { id: "ar.shaatri", name: "Abu Bakr Al-Shatri", arabicName: "أبو بكر الشاطري" },
 ]
 
 export default function AzkarApp() {
@@ -1749,15 +1749,17 @@ export default function AzkarApp() {
       }
     }
 
-    audio.onerror = () => {
-      console.error("[v0] Error playing Quran audio")
+    audio.onerror = (e) => {
+      console.error("[v0] Error playing Quran audio from URL:", audioUrl)
+      console.error("[v0] Error details:", e)
       setLoadingAudioId(null)
       setPlayingAudioType(null)
       setPlayingAudioId(null)
     }
 
     audio.play().catch((error) => {
-      console.error("[v0] Failed to play Quran audio:", error)
+      console.error("[v0] Failed to play Quran audio from URL:", audioUrl)
+      console.error("[v0] Play error:", error)
       setLoadingAudioId(null)
       setPlayingAudioType(null)
       setPlayingAudioId(null)
