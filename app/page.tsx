@@ -1516,7 +1516,13 @@ export default function AzkarApp() {
   }
 
   const setBookmark = (surahNumber: number, ayahNumber: number) => {
-    setQuranBookmark({ surahNumber, ayahNumber })
+    if (quranBookmark.surahNumber === surahNumber && quranBookmark.ayahNumber === ayahNumber) {
+      // Remove bookmark if clicking the same ayah
+      setQuranBookmark({ surahNumber: null, ayahNumber: null })
+    } else {
+      // Set new bookmark
+      setQuranBookmark({ surahNumber, ayahNumber })
+    }
   }
 
   const continueReading = () => {
@@ -1761,7 +1767,7 @@ export default function AzkarApp() {
                     isCompleted ? "ring-2 ring-green-500" : ""
                   }`}
                 >
-                  <div className="p-5">
+                  <div className="p-5 py-4 px-4">
                     <div className="flex justify-between mb-4 items-center">
                       <div className="flex items-center gap-2">
                         <span
@@ -1836,7 +1842,7 @@ export default function AzkarApp() {
             })}
           </div>
 
-          <div className="mt-8 p-4 bg-blue-50 rounded-lg">
+          <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
             <p className="text-sm text-blue-800 text-center">
               May Allah accept your dhikr and grant you His blessings 🤲
             </p>
@@ -1901,7 +1907,7 @@ export default function AzkarApp() {
             })}
           </div>
 
-          <div className="mt-8 p-4 bg-emerald-50 rounded-lg border-solid border border-emerald-400">
+          <div className="mt-8 p-4 bg-emerald-50 rounded-lg border-solid border border-green-300">
             <p className="text-sm text-emerald-800 text-center">
               الأربعون النووية - Imam An-Nawawi&apos;s 40 Hadith Collection 📚
             </p>
@@ -1910,7 +1916,7 @@ export default function AzkarApp() {
       )}
 
       {mainTab === "quran" && (
-        <div className="max-w-4xl mx-auto p-4 pb-8">
+        <div className="max-w-4xl mx-auto p-4 pb-8 pt-4">
           {isLoadingQuran && (
             <div className="flex flex-col items-center justify-center py-20">
               <Loader2 className="w-12 h-12 text-purple-500 animate-spin mb-4" />
@@ -2030,7 +2036,7 @@ export default function AzkarApp() {
                     })}
                   </div>
 
-                  <div className="mt-8 p-4 bg-purple-50 rounded-lg">
+                  <div className="mt-8 p-4 bg-purple-50 rounded-lg border border-purple-300">
                     <p className="text-sm text-purple-800 text-center">
                       📖 Complete Quran with all 114 surahs and English translations
                     </p>
@@ -2040,23 +2046,18 @@ export default function AzkarApp() {
 
               {quranView === "reading" && selectedSurah && (
                 <>
-                  <div className="mb-4 sticky top-0 bg-gradient-to-br from-slate-50 to-slate-100 z-10 pb-4">
-                    <button
-                      onClick={backToSurahList}
-                      className="mb-3 flex items-center gap-2 text-purple-600 hover:text-purple-700 font-medium"
-                    >
-                      <span className="text-xl">←</span>
-                      <span>Back to Surahs</span>
-                    </button>
-
+                  <div className="sticky top-0  z-10 pb-4 pt-4 mt-0 mb-2">
                     <div className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white p-5 rounded-xl shadow-lg py-2 px-2 pr-4">
                       <div className="flex items-center gap-4">
-                        <div className="bg-white/20 backdrop-blur rounded-lg flex items-center justify-center font-bold text-xl size-12">
-                          {selectedSurah.number}
-                        </div>
+                        <button
+                          onClick={backToSurahList}
+                          className="bg-white/20 backdrop-blur rounded-lg flex items-center justify-center size-12 hover:bg-white/30 transition-colors"
+                        >
+                          <ChevronLeft className="w-6 h-6" />
+                        </button>
                         <div className="text-right flex-1">
-                          <h2 className="font-bold text-xl">{selectedSurah.name}</h2>
-                          <p className="text-white/90 text-sm">{selectedSurah.verses.length} verses</p>
+                          <h2 className="font-bold text-base">{selectedSurah.name}</h2>
+                          <p className="text-white/90 text-xs">{selectedSurah.verses.length} verses</p>
                         </div>
                       </div>
                     </div>
@@ -2292,9 +2293,9 @@ export default function AzkarApp() {
                   return (
                     <div
                       key={prayer.name}
-                      className={`p-4 transition-all py-3 rounded-lg shadow-md ${
+                      className={`p-4 transition-all py-3 rounded-lg shadow ${
                         isNext
-                          ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 shadow-md"
+                          ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-1 border-blue-300 shadow-md"
                           : "bg-white shadow-md hover:shadow-lg"
                       }`}
                     >
@@ -2388,8 +2389,8 @@ export default function AzkarApp() {
 
       {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 z-30 px-4 pb-4">
-        <div className="max-w-md<bos>mx-auto bg-white rounded-2xl shadow-2xl border border-gray-200">
-          <div className="flex items-center justify-around px-2 py-2">
+        <div className="max-w-md mx-auto bg-white rounded-2xl shadow-2xl  border-1">
+          <div className="flex items-center justify-around px-2 py-2 ">
             <button
               onClick={() => setMainTab("duaa")}
               className={`flex flex-col items-center justify-center flex-1 py-2 px-3 rounded-xl transition-all ${
