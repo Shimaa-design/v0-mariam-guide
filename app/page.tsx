@@ -2341,7 +2341,7 @@ export default function AzkarApp() {
               {quranView === "reading" && selectedSurah && (
                 <>
                   <div className="sticky top-0  z-10 pb-4 pt-4 mt-0 mb-2">
-                    <div className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white p-5 rounded-xl shadow-lg py-2 px-2 pr-4">
+                    <div className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white p-5 rounded-xl shadow-lg py-2 px-2 pr-2">
                       <div className="flex items-center gap-4">
                         <button
                           onClick={backToSurahList}
