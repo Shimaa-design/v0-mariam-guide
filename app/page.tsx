@@ -359,7 +359,11 @@ export default function AzkarApp() {
         } else {
           // Get location from browser geolocation API
           const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject)
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              timeout: 10000, // 10 second timeout
+              enableHighAccuracy: false, // Faster, less battery
+              maximumAge: 300000 // Accept cached position up to 5 minutes old
+            })
           })
 
           const { latitude, longitude } = position.coords
@@ -389,47 +393,78 @@ export default function AzkarApp() {
         }
 
         // Fetch prayer times for all days in the week
-        await Promise.all(weekDates.map(async (date) => {
+        const results = await Promise.allSettled(weekDates.map(async (date) => {
           const dateKey = date.toDateString()
 
           // Skip if already cached
           if (prayerTimesCache.current[dateKey]) {
-            return
+            return { success: true, dateKey }
           }
 
-          const prayerResponse = await fetch(
-            `https://api.aladhan.com/v1/timings/${Math.floor(date.getTime() / 1000)}?latitude=${locationInfo.latitude}&longitude=${locationInfo.longitude}&method=2`,
-          )
-          const prayerData = await prayerResponse.json()
+          try {
+            const prayerResponse = await fetch(
+              `https://api.aladhan.com/v1/timings/${Math.floor(date.getTime() / 1000)}?latitude=${locationInfo.latitude}&longitude=${locationInfo.longitude}&method=2`,
+            )
+            const prayerData = await prayerResponse.json()
 
-          if (prayerData.code === 200) {
-            const timings = prayerData.data.timings
-            const newPrayerTimes = {
-              Fajr: timings.Fajr,
-              Dhuhr: timings.Dhuhr,
-              Asr: timings.Asr,
-              Maghrib: timings.Maghrib,
-              Isha: timings.Isha,
-              Jumuah: timings.Dhuhr, // Jumuah (Friday prayer) is at Dhuhr time
+            if (prayerData.code === 200) {
+              const timings = prayerData.data.timings
+              const newPrayerTimes = {
+                Fajr: timings.Fajr,
+                Dhuhr: timings.Dhuhr,
+                Asr: timings.Asr,
+                Maghrib: timings.Maghrib,
+                Isha: timings.Isha,
+                Jumuah: timings.Dhuhr, // Jumuah (Friday prayer) is at Dhuhr time
+              }
+
+              // Cache the prayer times for this date
+              prayerTimesCache.current[dateKey] = newPrayerTimes
+              return { success: true, dateKey }
+            } else {
+              console.warn(`Failed to fetch prayer times for ${dateKey}:`, prayerData)
+              return { success: false, dateKey }
             }
-
-            // Cache the prayer times for this date
-            prayerTimesCache.current[dateKey] = newPrayerTimes
-          } else {
-            throw new Error("Failed to fetch prayer times")
+          } catch (err) {
+            console.warn(`Error fetching prayer times for ${dateKey}:`, err)
+            return { success: false, dateKey }
           }
         }))
 
         // Set prayer times for currently selected date
         const dateKey = selectedDate.toDateString()
-        setPrayerTimes(prayerTimesCache.current[dateKey])
+        const selectedDatePrayer = prayerTimesCache.current[dateKey]
+
+        if (!selectedDatePrayer) {
+          throw new Error("Failed to fetch prayer times for the selected date. Please try again.")
+        }
+
+        setPrayerTimes(selectedDatePrayer)
 
         setIsLoadingPrayer(false)
       } catch (error) {
         console.error("Error fetching prayer times:", error)
-        setPrayerError(
-          error instanceof Error ? error.message : "Failed to fetch prayer times. Please enable location access.",
-        )
+
+        // Provide more specific error messages
+        let errorMessage = "Failed to fetch prayer times. Please try again."
+
+        if (error instanceof GeolocationPositionError) {
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = "Location access denied. Please enable location access in your browser settings."
+              break
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = "Location unavailable. Please check your device's location services."
+              break
+            case error.TIMEOUT:
+              errorMessage = "Location request timed out. Please try again."
+              break
+          }
+        } else if (error instanceof Error) {
+          errorMessage = error.message
+        }
+
+        setPrayerError(errorMessage)
         setIsLoadingPrayer(false)
       }
     }
