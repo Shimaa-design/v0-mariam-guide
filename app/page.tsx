@@ -76,6 +76,8 @@ export default function AzkarApp() {
 
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
+  const [swipeOffset, setSwipeOffset] = useState(0)
+  const categoryNavRef = useRef<HTMLDivElement>(null)
 
   const minSwipeDistance = 50
 
@@ -597,20 +599,36 @@ export default function AzkarApp() {
     
     if (direction === 'next' && currentIndex < categories.length - 1) {
       setSelectedCategory(categories[currentIndex + 1])
+      scrollCategoryIntoView(categories[currentIndex + 1])
     } else if (direction === 'prev' && currentIndex > 0) {
       setSelectedCategory(categories[currentIndex - 1])
+      scrollCategoryIntoView(categories[currentIndex - 1])
     }
+  }
+
+  const scrollCategoryIntoView = (category: string) => {
+    setTimeout(() => {
+      const categoryButton = document.querySelector(`[data-category="${category}"]`)
+      if (categoryButton) {
+        categoryButton.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+      }
+    }, 100)
   }
 
   const onTouchStart = (e: React.TouchEvent) => {
     if (mainTab !== 'duaa') return
     setTouchEnd(null)
     setTouchStart(e.targetTouches[0].clientX)
+    setSwipeOffset(0)
   }
 
   const onTouchMove = (e: React.TouchEvent) => {
     if (mainTab !== 'duaa') return
-    setTouchEnd(e.targetTouches[0].clientX)
+    const currentTouch = e.targetTouches[0].clientX
+    setTouchEnd(currentTouch)
+    if (touchStart) {
+      setSwipeOffset(currentTouch - touchStart)
+    }
   }
 
   const onTouchEnd = () => {
@@ -625,6 +643,8 @@ export default function AzkarApp() {
     } else if (isRightSwipe) {
       navigateCategory('prev')
     }
+    
+    setTimeout(() => setSwipeOffset(0), 300)
   }
 
   const azkarData = {
@@ -1740,7 +1760,7 @@ export default function AzkarApp() {
       {mainTab === "duaa" && (
         <div className="bg-white shadow-md sticky top-0 z-10">
           <div className="max-w-4xl mx-auto px-4">
-            <div className="flex gap-2 overflow-x-auto py-4 scrollbar-hide">
+            <div ref={categoryNavRef} className="flex gap-2 overflow-x-auto py-4 scrollbar-hide">
               {Object.entries(azkarData).map(([key, data]) => {
                 const Icon = data.icon
                 const categoryNames: Record<string, string> = {
@@ -1764,7 +1784,11 @@ export default function AzkarApp() {
                 return (
                   <button
                     key={key}
-                    onClick={() => setSelectedCategory(key)}
+                    data-category={key}
+                    onClick={() => {
+                      setSelectedCategory(key)
+                      scrollCategoryIntoView(key)
+                    }}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
                       selectedCategory === key
                         ? "bg-gradient-to-r " + data.color + " text-white shadow-md"
@@ -1782,11 +1806,15 @@ export default function AzkarApp() {
       )}
 
       {mainTab === "duaa" && (
-        <div 
+        <div
           className="max-w-4xl mx-auto p-4 pb-8"
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
+          style={{
+            transform: `translateX(${swipeOffset * 0.3}px)`,
+            transition: swipeOffset === 0 ? 'transform 0.3s ease-out' : 'none'
+          }}
         >
           <div className="mb-4 flex justify-end">
             <button
@@ -1867,7 +1895,7 @@ export default function AzkarApp() {
                         <div className="flex gap-2">
                           <button
                             onClick={() => resetCounter(dhikr.id)}
-                            className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
+                            className="px-3 text-sm bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors py-2"
                           >
                             Reset
                           </button>
