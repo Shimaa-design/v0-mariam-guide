@@ -1475,9 +1475,10 @@ export default function AzkarApp() {
             const nextElement = dhikrRefs.current[nextDhikrId]
 
             if (nextElement) {
+              // Changed block from "center" to "start"
               nextElement.scrollIntoView({
                 behavior: "smooth",
-                block: "center",
+                block: "start",
               })
             }
           }
@@ -1653,7 +1654,7 @@ export default function AzkarApp() {
         setTimeout(() => {
           nextElement.scrollIntoView({
             behavior: "smooth",
-            block: "center",
+            block: "start",
           })
         }, 300)
       }
@@ -1839,8 +1840,8 @@ export default function AzkarApp() {
             onTouchEnd={onTouchEnd}
             style={{
               transform: `translateX(${swipeOffset}px)`,
-              transition: swipeOffset === 0 
-                ? 'transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1)' 
+              transition: swipeOffset === 0
+                ? 'transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1)'
                 : 'none',
               willChange: 'transform',
               touchAction: 'pan-y' // Allow vertical scrolling but intercept horizontal
@@ -1858,7 +1859,7 @@ export default function AzkarApp() {
                     ref={(el) => {
                       if (el) dhikrRefs.current[dhikr.id] = el
                     }}
-                    className={`bg-white rounded-xl shadow-md overflow-hidden transition-all ${
+                    className={`bg-white rounded-xl shadow-md overflow-hidden transition-all scroll-mt-24 ${
                       isCompleted ? "ring-2 ring-green-500" : ""
                     }`}
                   >
@@ -2173,7 +2174,7 @@ export default function AzkarApp() {
                             if (el) ayahRefs.current[ayahKey] = el
                           }}
                           onClick={() => handleAyahClick(index)}
-                          className={`p-5 rounded-xl transition-all cursor-pointer py-4 px-4 ${
+                          className={`p-5 rounded-xl transition-all cursor-pointer py-4 px-4 scroll-mt-24 ${
                             isAyatAlKursi
                               ? "bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-300 hover:border-amber-400"
                               : isBookmarked
@@ -2209,7 +2210,7 @@ export default function AzkarApp() {
                           </div>
 
                           <div className="text-right mb-4">
-                            <p className={`leading-loose text-gray-800 ${isAyatAlKursi ? "text-2xl" : "text-xl"}`}>
+                            <p className={`leading-loose text-gray-800 mt-2 ${isAyatAlKursi ? "text-2xl" : "text-xl"}`}>
                               {verse.arabic}
                             </p>
                           </div>
