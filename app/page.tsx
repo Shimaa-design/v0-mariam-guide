@@ -1624,7 +1624,10 @@ export default function AzkarApp() {
 
       // Add event listeners
       adhanAudioRef.current.addEventListener("ended", () => {
-        setIsPlayingAdhan(false)
+        // Only stop if not looping (this shouldn't trigger when loop is enabled)
+        if (!adhanAudioRef.current?.loop) {
+          setIsPlayingAdhan(false)
+        }
       })
 
       adhanAudioRef.current.addEventListener("error", (e) => {
@@ -1635,9 +1638,13 @@ export default function AzkarApp() {
     }
 
     if (isPlayingAdhan) {
+      // Pause and disable looping
       adhanAudioRef.current.pause()
+      adhanAudioRef.current.loop = false
       setIsPlayingAdhan(false)
     } else {
+      // Enable looping and play
+      adhanAudioRef.current.loop = true
       adhanAudioRef.current
         .play()
         .then(() => {
