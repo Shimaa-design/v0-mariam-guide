@@ -207,6 +207,20 @@ export default function AzkarApp() {
     }
   }, [])
 
+  // Generate a week of dates starting from today
+  const getWeekDates = () => {
+    const dates = []
+    const today = new Date()
+    today.setHours(0, 0, 0, 0) // Reset time to start of day
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today)
+      date.setDate(today.getDate() + i)
+      dates.push(date)
+    }
+    return dates
+  }
+
   useEffect(() => {
     const savedCounts = localStorage.getItem("mariam-guide-duaa-counts")
     if (savedCounts) {
@@ -311,14 +325,18 @@ export default function AzkarApp() {
     }
   }, [mainTab])
 
-  // Fetch location and prayer times
+  // Fetch location and prayer times for all week days
   useEffect(() => {
     const fetchLocationAndPrayer = async () => {
       if (mainTab !== "pray") return
 
-      // Check cache first
-      const dateKey = selectedDate.toDateString()
-      if (prayerTimesCache.current[dateKey]) {
+      // Check if we already have all week data cached
+      const weekDates = getWeekDates()
+      const allCached = weekDates.every(date => prayerTimesCache.current[date.toDateString()])
+
+      if (allCached) {
+        // Set prayer times for currently selected date from cache
+        const dateKey = selectedDate.toDateString()
         setPrayerTimes(prayerTimesCache.current[dateKey])
         return
       }
@@ -370,29 +388,41 @@ export default function AzkarApp() {
           throw new Error("Failed to get location")
         }
 
-        // Use selectedDate instead of current date
-        const prayerResponse = await fetch(
-          `https://api.aladhan.com/v1/timings/${Math.floor(selectedDate.getTime() / 1000)}?latitude=${locationInfo.latitude}&longitude=${locationInfo.longitude}&method=2`,
-        )
-        const prayerData = await prayerResponse.json()
+        // Fetch prayer times for all days in the week
+        await Promise.all(weekDates.map(async (date) => {
+          const dateKey = date.toDateString()
 
-        if (prayerData.code === 200) {
-          const timings = prayerData.data.timings
-          const newPrayerTimes = {
-            Fajr: timings.Fajr,
-            Dhuhr: timings.Dhuhr,
-            Asr: timings.Asr,
-            Maghrib: timings.Maghrib,
-            Isha: timings.Isha,
-            Jumuah: timings.Dhuhr, // Jumuah (Friday prayer) is at Dhuhr time
+          // Skip if already cached
+          if (prayerTimesCache.current[dateKey]) {
+            return
           }
-          setPrayerTimes(newPrayerTimes)
 
-          // Cache the prayer times for this date
-          prayerTimesCache.current[dateKey] = newPrayerTimes
-        } else {
-          throw new Error("Failed to fetch prayer times")
-        }
+          const prayerResponse = await fetch(
+            `https://api.aladhan.com/v1/timings/${Math.floor(date.getTime() / 1000)}?latitude=${locationInfo.latitude}&longitude=${locationInfo.longitude}&method=2`,
+          )
+          const prayerData = await prayerResponse.json()
+
+          if (prayerData.code === 200) {
+            const timings = prayerData.data.timings
+            const newPrayerTimes = {
+              Fajr: timings.Fajr,
+              Dhuhr: timings.Dhuhr,
+              Asr: timings.Asr,
+              Maghrib: timings.Maghrib,
+              Isha: timings.Isha,
+              Jumuah: timings.Dhuhr, // Jumuah (Friday prayer) is at Dhuhr time
+            }
+
+            // Cache the prayer times for this date
+            prayerTimesCache.current[dateKey] = newPrayerTimes
+          } else {
+            throw new Error("Failed to fetch prayer times")
+          }
+        }))
+
+        // Set prayer times for currently selected date
+        const dateKey = selectedDate.toDateString()
+        setPrayerTimes(prayerTimesCache.current[dateKey])
 
         setIsLoadingPrayer(false)
       } catch (error) {
@@ -405,7 +435,17 @@ export default function AzkarApp() {
     }
 
     fetchLocationAndPrayer()
-  }, [mainTab, selectedDate])
+  }, [mainTab])
+
+  // Update displayed prayer times when selected date changes
+  useEffect(() => {
+    if (mainTab !== "pray") return
+
+    const dateKey = selectedDate.toDateString()
+    if (prayerTimesCache.current[dateKey]) {
+      setPrayerTimes(prayerTimesCache.current[dateKey])
+    }
+  }, [selectedDate, mainTab])
 
   // Calculate next prayer and countdown
   useEffect(() => {
@@ -1511,20 +1551,6 @@ export default function AzkarApp() {
     const period = hours >= 12 ? "PM" : "AM"
     const hours12 = hours % 12 || 12
     return `${hours12}:${minutes.toString().padStart(2, "0")} ${period}`
-  }
-
-  // Generate a week of dates starting from today
-  const getWeekDates = () => {
-    const dates = []
-    const today = new Date()
-    today.setHours(0, 0, 0, 0) // Reset time to start of day
-
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(today)
-      date.setDate(today.getDate() + i)
-      dates.push(date)
-    }
-    return dates
   }
 
   const formatDayName = (date: Date) => {
