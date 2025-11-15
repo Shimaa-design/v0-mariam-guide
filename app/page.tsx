@@ -234,10 +234,12 @@ export default function AzkarApp() {
       }
     }
 
-    // Load cached Quran data only (don't fetch on mount for better mobile performance)
+    // Load cached Quran data and eagerly fetch if not cached
     const cachedQuranData = localStorage.getItem("mariam-guide-quran-data")
     const cachedVersion = localStorage.getItem("mariam-guide-quran-cache-version")
     const CACHE_VERSION = "v1"
+
+    let hasValidCache = false
 
     if (cachedQuranData && cachedVersion === CACHE_VERSION) {
       try {
@@ -246,6 +248,7 @@ export default function AzkarApp() {
           console.log("[v0] Loading Quran data from cache...")
           setQuranData(parsedData)
           console.log(`[v0] Successfully loaded ${parsedData.length} surahs from cache`)
+          hasValidCache = true
         }
       } catch (error) {
         console.error("Failed to load cached Quran data:", error)
@@ -254,10 +257,15 @@ export default function AzkarApp() {
         localStorage.removeItem("mariam-guide-quran-cache-version")
       }
     }
-    // Note: Quran data will be fetched lazily when user switches to Quran tab
-  }, []) // Empty dependency array means this runs once on mount
 
-  // Lazy load Quran data when user switches to Quran tab (performance optimization for mobile)
+    // Eagerly fetch Quran data if not already cached
+    if (!hasValidCache) {
+      console.log("[v0] No valid cache found, starting eager fetch of Quran data...")
+      fetchQuranData()
+    }
+  }, [fetchQuranData]) // Dependency on fetchQuranData (wrapped in useCallback)
+
+  // Fallback: Fetch Quran data if user navigates to tab before eager loading completes
   useEffect(() => {
     if (mainTab === "quran" && quranData.length === 0 && !isLoadingQuran) {
       console.log("[v0] User switched to Quran tab, fetching data...")
