@@ -88,6 +88,7 @@ export default function AzkarApp() {
   const [selectedReciter, setSelectedReciter] = useState(RECITERS[0].id)
   const [playingAudioType, setPlayingAudioType] = useState<"surah" | "ayah" | null>(null)
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null)
+  const [loadingAudioId, setLoadingAudioId] = useState<string | null>(null)
   const [showReciterDropdown, setShowReciterDropdown] = useState(false)
 
   const [playingDuaaId, setPlayingDuaaId] = useState<string | null>(null)
@@ -1703,19 +1704,28 @@ export default function AzkarApp() {
 
     console.log("[v0] Playing Quran audio:", audioUrl)
 
+    // Set loading state immediately
+    setLoadingAudioId(audioId)
+
     const audio = new Audio(audioUrl)
     quranAudioRef.current = audio
-    setPlayingAudioType(type)
-    setPlayingAudioId(audioId)
+
+    // Handle when audio can start playing
+    audio.oncanplaythrough = () => {
+      console.log("[v0] Audio ready to play")
+      setLoadingAudioId(null)
+      setPlayingAudioType(type)
+      setPlayingAudioId(audioId)
+    }
 
     audio.onended = () => {
       if (type === "ayah" && selectedSurah) {
         const currentAyahIndex = selectedSurah.verses.findIndex(v => v.number === ayahNumber)
         const nextAyahIndex = currentAyahIndex + 1
-        
+
         if (nextAyahIndex < selectedSurah.verses.length) {
           const nextAyah = selectedSurah.verses[nextAyahIndex]
-          
+
           // Auto-scroll to next ayah
           setTimeout(() => {
             const nextAyahElement = document.getElementById(`ayah-${nextAyah.number}`)
@@ -1723,7 +1733,7 @@ export default function AzkarApp() {
               nextAyahElement.scrollIntoView({ behavior: "smooth", block: "start" })
             }
           }, 100)
-          
+
           // Auto-play next ayah
           setTimeout(() => {
             playQuranAudio("ayah", selectedSurah.number, nextAyah.number)
@@ -1741,12 +1751,14 @@ export default function AzkarApp() {
 
     audio.onerror = () => {
       console.error("[v0] Error playing Quran audio")
+      setLoadingAudioId(null)
       setPlayingAudioType(null)
       setPlayingAudioId(null)
     }
 
     audio.play().catch((error) => {
       console.error("[v0] Failed to play Quran audio:", error)
+      setLoadingAudioId(null)
       setPlayingAudioType(null)
       setPlayingAudioId(null)
     })
@@ -1757,6 +1769,7 @@ export default function AzkarApp() {
       quranAudioRef.current.pause()
       quranAudioRef.current = null
     }
+    setLoadingAudioId(null)
     setPlayingAudioType(null)
     setPlayingAudioId(null)
   }
@@ -2316,7 +2329,9 @@ export default function AzkarApp() {
                                 }}
                                 className="p-2 rounded-lg bg-purple-100 hover:bg-purple-200 transition-colors"
                               >
-                                {playingAudioType === "surah" && playingAudioId === `surah-${surah.number}` ? (
+                                {loadingAudioId === `surah-${surah.number}` ? (
+                                  <Loader2 className="w-5 h-5 text-purple-600 animate-spin" />
+                                ) : playingAudioType === "surah" && playingAudioId === `surah-${surah.number}` ? (
                                   <Pause className="w-5 h-5 text-purple-600" />
                                 ) : (
                                   <Play className="w-5 h-5 text-purple-600" />
@@ -2360,7 +2375,9 @@ export default function AzkarApp() {
                           }}
                           className="bg-white/20 backdrop-blur rounded-lg flex items-center justify-center size-12 hover:bg-white/30 transition-colors"
                         >
-                          {playingAudioType === "surah" && playingAudioId === `surah-${selectedSurah.number}` ? (
+                          {loadingAudioId === `surah-${selectedSurah.number}` ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                          ) : playingAudioType === "surah" && playingAudioId === `surah-${selectedSurah.number}` ? (
                             <Pause className="w-5 h-5" />
                           ) : (
                             <Play className="w-5 h-5" />
@@ -2427,7 +2444,9 @@ export default function AzkarApp() {
                               }}
                               className="p-1.5 rounded-lg bg-purple-100 hover:bg-purple-200 transition-colors"
                             >
-                              {playingAudioType === "ayah" && playingAudioId === `ayah-${selectedSurah.number}-${verse.number}` ? (
+                              {loadingAudioId === `ayah-${selectedSurah.number}-${verse.number}` ? (
+                                <Loader2 className="w-4 h-4 text-purple-600 animate-spin" />
+                              ) : playingAudioType === "ayah" && playingAudioId === `ayah-${selectedSurah.number}-${verse.number}` ? (
                                 <Pause className="w-4 h-4 text-purple-600" />
                               ) : (
                                 <Play className="w-4 h-4 text-purple-600" />
