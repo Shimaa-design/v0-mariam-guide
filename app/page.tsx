@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Moon, Sun, BookOpen, Heart, Clock, Home, Utensils, CloudRain, Car, Frown, Smile, BookMarked, DoorOpen, AlertCircle, List, Loader2, Volume2, Pause, VolumeX, ChevronLeft, ChevronRight, Play } from 'lucide-react'
+import { toast, Toaster } from "sonner"
 
 interface QuranVerse {
   number: number
@@ -37,7 +38,7 @@ interface LocationData {
 
 const RECITERS = [
   { id: "ar.alafasy", name: "Mishary Rashid Alafasy", arabicName: "مشاري راشد العفاسي" },
-  { id: "ar.abdulbasit", name: "Abdul Basit (Murattal)", arabicName: "عبد الباسط عبد الصمد" },
+  { id: "ar.abdulbasitmurattal", name: "Abdul Basit (Murattal)", arabicName: "عبد الباسط عبد الصمد" },
   { id: "ar.minshawi", name: "Mohamed Siddiq Minshawi", arabicName: "محمد صديق المنشاوي" },
   { id: "ar.hussary", name: "Mahmoud Khalil Al-Hussary", arabicName: "محمود خليل الحصري" },
   { id: "ar.shaatri", name: "Abu Bakr Al-Shatri", arabicName: "أبو بكر الشاطري" },
@@ -122,28 +123,30 @@ export default function AzkarApp() {
       console.log("[v0] Fetched surah list successfully")
 
       const allSurahs: QuranSurah[] = []
-      // Optimized for mobile: increased batch size, reduced delay for faster loading
-      const BATCH_SIZE = 10
-      const BATCH_DELAY = 500
+      // Reduced batch size and increased delay to prevent API rate limiting
+      const BATCH_SIZE = 3
+      const BATCH_DELAY = 2000
       const totalSurahs = surahListData.data.length
 
-      const fetchWithRetry = async (url: string, retries = 3, delay = 1000): Promise<Response> => {
+      const fetchWithRetry = async (url: string, retries = 5, delay = 2000): Promise<Response> => {
         for (let i = 0; i < retries; i++) {
           try {
             const response = await fetch(url)
             if (response.ok) return response
 
             if (response.status === 429 || response.status >= 500) {
-              console.log(`[v0] Retry ${i + 1}/${retries} for ${url} (status: ${response.status})`)
-              await new Promise((resolve) => setTimeout(resolve, delay * Math.pow(2, i)))
+              const backoffDelay = delay * Math.pow(2, i)
+              console.log(`[v0] Retry ${i + 1}/${retries} for ${url} (status: ${response.status}) - waiting ${backoffDelay}ms`)
+              await new Promise((resolve) => setTimeout(resolve, backoffDelay))
               continue
             }
 
             throw new Error(`HTTP ${response.status}`)
           } catch (error) {
             if (i === retries - 1) throw error
-            console.log(`[v0] Retry ${i + 1}/${retries} after error:`, error)
-            await new Promise((resolve) => setTimeout(resolve, delay * Math.pow(2, i)))
+            const backoffDelay = delay * Math.pow(2, i)
+            console.log(`[v0] Retry ${i + 1}/${retries} after error - waiting ${backoffDelay}ms:`, error)
+            await new Promise((resolve) => setTimeout(resolve, backoffDelay))
           }
         }
         throw new Error("Max retries reached")
@@ -165,7 +168,8 @@ export default function AzkarApp() {
             )
             const arabicData = await arabicResponse.json()
 
-            await new Promise((resolve) => setTimeout(resolve, 300))
+            // Increased delay between Arabic and English requests to avoid rate limiting
+            await new Promise((resolve) => setTimeout(resolve, 1000))
 
             const englishResponse = await fetchWithRetry(`https://api.alquran.cloud/v1/surah/${surahNumber}/en.asad`)
             const englishData = await englishResponse.json()
@@ -233,8 +237,20 @@ export default function AzkarApp() {
       setIsLoadingQuran(false)
     } catch (error) {
       console.error("[v0] Error fetching Quran data:", error)
-      setQuranError(error instanceof Error ? error.message : "Failed to load Quran data")
+      const errorMessage = error instanceof Error ? error.message : "Failed to load Quran data"
+      setQuranError(errorMessage)
       setIsLoadingQuran(false)
+
+      // Show user-friendly error notification
+      if (errorMessage.includes("429") || errorMessage.includes("Too Many Requests")) {
+        toast.error("Loading Quran data... Please wait, the server is busy.", {
+          duration: 5000,
+        })
+      } else {
+        toast.error("Failed to load Quran data. Please check your internet connection.", {
+          duration: 5000,
+        })
+      }
     }
   }, [])
 
@@ -1752,6 +1768,13 @@ export default function AzkarApp() {
     audio.onerror = (e) => {
       console.error("[v0] Error playing Quran audio from URL:", audioUrl)
       console.error("[v0] Error details:", e)
+
+      // Show user-friendly error message
+      const reciterName = RECITERS.find(r => r.id === selectedReciter)?.name || "this reciter"
+      toast.error(`Unable to play audio for ${reciterName}. The audio file may not be available.`, {
+        duration: 4000,
+      })
+
       setLoadingAudioId(null)
       setPlayingAudioType(null)
       setPlayingAudioId(null)
@@ -1760,6 +1783,13 @@ export default function AzkarApp() {
     audio.play().catch((error) => {
       console.error("[v0] Failed to play Quran audio from URL:", audioUrl)
       console.error("[v0] Play error:", error)
+
+      // Show user-friendly error message
+      const reciterName = RECITERS.find(r => r.id === selectedReciter)?.name || "this reciter"
+      toast.error(`Failed to play audio for ${reciterName}. Please try another reciter.`, {
+        duration: 4000,
+      })
+
       setLoadingAudioId(null)
       setPlayingAudioType(null)
       setPlayingAudioId(null)
@@ -2785,6 +2815,7 @@ export default function AzkarApp() {
           </div>
         </div>
       </div>
+      <Toaster position="bottom-center" richColors />
     </div>
   )
 }
