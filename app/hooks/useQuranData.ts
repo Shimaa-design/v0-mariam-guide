@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect, useRef, useCallback } from "react"
 import { toast } from "sonner"
 
@@ -80,7 +82,9 @@ export function useQuranData(mainTab: string) {
 
             if (response.status === 429 || response.status >= 500) {
               const backoffDelay = delay * Math.pow(2, i)
-              console.log(`[v0] Retry ${i + 1}/${retries} for ${url} (status: ${response.status}) - waiting ${backoffDelay}ms`)
+              console.log(
+                `[v0] Retry ${i + 1}/${retries} for ${url} (status: ${response.status}) - waiting ${backoffDelay}ms`,
+              )
               await new Promise((resolve) => setTimeout(resolve, backoffDelay))
               continue
             }
@@ -107,9 +111,7 @@ export function useQuranData(mainTab: string) {
           const surahNumber = surahInfo.number
 
           try {
-            const arabicResponse = await fetchWithRetry(
-              `https://api.alquran.cloud/v1/surah/${surahNumber}/ar.alafasy`,
-            )
+            const arabicResponse = await fetchWithRetry(`https://api.alquran.cloud/v1/surah/${surahNumber}/ar.alafasy`)
             const arabicData = await arabicResponse.json()
 
             // Increased delay between Arabic and English requests to avoid rate limiting
@@ -338,7 +340,7 @@ export function useQuranData(mainTab: string) {
     let audioUrl: string
     if (type === "surah") {
       // For surah, we need to get the first ayah number of that surah
-      const surah = quranData.find(s => s.number === surahNumber)
+      const surah = quranData.find((s) => s.number === surahNumber)
       if (!surah || surah.verses.length === 0) return
 
       audioUrl = `https://cdn.islamic.network/quran/audio-surah/128/${selectedReciter}/${surahNumber}.mp3`
@@ -366,7 +368,7 @@ export function useQuranData(mainTab: string) {
 
     audio.onended = () => {
       if (type === "ayah" && selectedSurah) {
-        const currentAyahIndex = selectedSurah.verses.findIndex(v => v.number === ayahNumber)
+        const currentAyahIndex = selectedSurah.verses.findIndex((v) => v.number === ayahNumber)
         const nextAyahIndex = currentAyahIndex + 1
 
         if (nextAyahIndex < selectedSurah.verses.length) {
@@ -400,7 +402,7 @@ export function useQuranData(mainTab: string) {
       console.error("[v0] Error details:", e)
 
       // Show user-friendly error message
-      const reciterName = RECITERS.find(r => r.id === selectedReciter)?.name || "this reciter"
+      const reciterName = RECITERS.find((r) => r.id === selectedReciter)?.name || "this reciter"
       toast.error(`Unable to play audio for ${reciterName}. The audio file may not be available.`, {
         duration: 4000,
       })
@@ -415,7 +417,7 @@ export function useQuranData(mainTab: string) {
       console.error("[v0] Play error:", error)
 
       // Show user-friendly error message
-      const reciterName = RECITERS.find(r => r.id === selectedReciter)?.name || "this reciter"
+      const reciterName = RECITERS.find((r) => r.id === selectedReciter)?.name || "this reciter"
       toast.error(`Failed to play audio for ${reciterName}. Please try another reciter.`, {
         duration: 4000,
       })
@@ -438,18 +440,6 @@ export function useQuranData(mainTab: string) {
 
   const handleAyahClick = (index: number) => {
     if (!selectedSurah) return
-
-    // Check if the clicked ayah is already bookmarked
-    const currentAyahNumber = selectedSurah.verses[index].number;
-    const isHighlighted = quranBookmark.surahNumber === selectedSurah.number && quranBookmark.ayahNumber === currentAyahNumber;
-
-    // Toggle bookmark if already highlighted
-    if (isHighlighted) {
-      setBookmark(selectedSurah.number, null); // Clear bookmark
-      return;
-    }
-
-    setBookmark(selectedSurah.number, currentAyahNumber); // Set new bookmark
 
     const nextAyahIndex = index + 1
     if (nextAyahIndex < selectedSurah.verses.length) {

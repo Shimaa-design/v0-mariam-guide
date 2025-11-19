@@ -4,7 +4,21 @@
 import { useState, useEffect } from "react"
 
 // External libraries
-import { List, Loader2, Volume2, Pause, VolumeX, ChevronLeft, ChevronRight, Play, BookOpen, BookMarked, Heart, Clock, AlertCircle } from 'lucide-react'
+import {
+  List,
+  Loader2,
+  Volume2,
+  Pause,
+  VolumeX,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  BookOpen,
+  BookMarked,
+  Heart,
+  Clock,
+  AlertCircle,
+} from "lucide-react"
 import { Toaster } from "sonner"
 import { ThemeToggle } from "@/components/theme-toggle"
 
@@ -24,7 +38,7 @@ import { useAdhanAudio } from "./hooks/useAdhanAudio"
 import { useDuaaAudio } from "./hooks/useDuaaAudio"
 
 // Types
-import type { QuranVerse, QuranSurah, PrayerTimes, LocationData } from "./types"
+import type { QuranVerse } from "./types"
 
 export default function AzkarApp() {
   const [mainTab, setMainTab] = useState("duaa")
@@ -150,7 +164,7 @@ export default function AzkarApp() {
             {mainTab === "duaa" && currentCategory.title}
             {mainTab === "hadith" && "الأربعون النووية"}
             {mainTab === "quran" && "Quran"}
-            {mainTab === "pray" && `Prayer Times for ${new Date().toLocaleDateString('en-US', { month: 'long' })}`}
+            {mainTab === "pray" && `Prayer Times for ${new Date().toLocaleDateString("en-US", { month: "long" })}`}
           </p>
         </div>
       </div>
@@ -220,11 +234,9 @@ export default function AzkarApp() {
             onTouchEnd={onTouchEnd}
             style={{
               transform: `translateX(${swipeOffset}px)`,
-              transition: swipeOffset === 0
-                ? 'transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1)'
-                : 'none',
-              willChange: 'transform',
-              touchAction: 'pan-y' // Allow vertical scrolling but intercept horizontal
+              transition: swipeOffset === 0 ? "transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1)" : "none",
+              willChange: "transform",
+              touchAction: "pan-y", // Allow vertical scrolling but intercept horizontal
             }}
           >
             <div className="space-y-4">
@@ -248,12 +260,18 @@ export default function AzkarApp() {
                         <div className="flex items-center gap-2">
                           <span
                             className={`text-sm font-semibold px-3 py-1 rounded-full ${
-                              isCompleted ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                              isCompleted
+                                ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300"
+                                : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                             }`}
                           >
                             #{index + 1}
                           </span>
-                          {isCompleted && <span className="text-green-500 dark:text-green-400 text-sm font-semibold">✓ Completed</span>}
+                          {isCompleted && (
+                            <span className="text-green-500 dark:text-green-400 text-sm font-semibold">
+                              ✓ Completed
+                            </span>
+                          )}
                         </div>
                         <button
                           onClick={() => playDuaaAudio(dhikr.id, dhikr.arabic)}
@@ -290,7 +308,9 @@ export default function AzkarApp() {
 
                         <div className="flex items-center justify-between">
                           <div className="text-sm text-gray-600 dark:text-gray-400">
-                            <span className="font-semibold text-lg text-gray-800 dark:text-gray-200">{currentCount}</span>
+                            <span className="font-semibold text-lg text-gray-800 dark:text-gray-200">
+                              {currentCount}
+                            </span>
                             <span> / {dhikr.count}</span>
                           </div>
 
@@ -349,12 +369,16 @@ export default function AzkarApp() {
                       <div className="flex items-center gap-2">
                         <span
                           className={`text-sm font-semibold px-3 py-1 rounded-full ${
-                            isRead ? "bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-300" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                            isRead
+                              ? "bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-300"
+                              : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                           }`}
                         >
                           الحديث #{hadith.number}
                         </span>
-                        {isRead && <span className="text-emerald-500 dark:text-emerald-400 text-sm font-semibold">✓ Read</span>}
+                        {isRead && (
+                          <span className="text-emerald-500 dark:text-emerald-400 text-sm font-semibold">✓ Read</span>
+                        )}
                       </div>
                     </div>
 
@@ -444,11 +468,13 @@ export default function AzkarApp() {
                         <div className="text-left">
                           <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Reciter</p>
                           <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                            {RECITERS.find(r => r.id === selectedReciter)?.name}
+                            {RECITERS.find((r) => r.id === selectedReciter)?.name}
                           </p>
                         </div>
                       </div>
-                      <ChevronLeft className={`w-5 h-5 text-gray-400 transition-transform ${showReciterDropdown ? 'rotate-90' : '-rotate-90'}`} />
+                      <ChevronLeft
+                        className={`w-5 h-5 text-gray-400 transition-transform ${showReciterDropdown ? "rotate-90" : "-rotate-90"}`}
+                      />
                     </button>
 
                     {showReciterDropdown && (
@@ -462,7 +488,7 @@ export default function AzkarApp() {
                               stopQuranAudio()
                             }}
                             className={`w-full p-4 text-left hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0 ${
-                              selectedReciter === reciter.id ? 'bg-purple-100 dark:bg-purple-900/50' : ''
+                              selectedReciter === reciter.id ? "bg-purple-100 dark:bg-purple-900/50" : ""
                             }`}
                           >
                             <p className="font-semibold text-gray-800 dark:text-gray-200">{reciter.name}</p>
@@ -480,12 +506,14 @@ export default function AzkarApp() {
                           <span className="text-2xl">🕌</span>
                           <div>
                             <p className="font-semibold text-amber-900 dark:text-amber-200">It&apos;s Friday!</p>
-                            <p className="text-sm text-amber-800 dark:text-amber-300">It's recommended to recite Surah Al-Kahf today</p>
+                            <p className="text-sm text-amber-800 dark:text-amber-300">
+                              It's recommended to recite Surah Al-Kahf today
+                            </p>
                           </div>
                         </div>
                         <button
                           onClick={() => {
-                            const kahfSurah = quranData.find(s => s.number === 18)
+                            const kahfSurah = quranData.find((s) => s.number === 18)
                             if (kahfSurah) openSurah(kahfSurah)
                           }}
                           className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium text-sm transition-colors whitespace-nowrap"
@@ -668,7 +696,8 @@ export default function AzkarApp() {
                             >
                               {loadingAudioId === `ayah-${selectedSurah.number}-${verse.number}` ? (
                                 <Loader2 className="w-4 h-4 text-purple-600 dark:text-purple-400 animate-spin" />
-                              ) : playingAudioType === "ayah" && playingAudioId === `ayah-${selectedSurah.number}-${verse.number}` ? (
+                              ) : playingAudioType === "ayah" &&
+                                playingAudioId === `ayah-${selectedSurah.number}-${verse.number}` ? (
                                 <Pause className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                               ) : (
                                 <Play className="w-4 h-4 text-purple-600 dark:text-purple-400" />
@@ -677,7 +706,9 @@ export default function AzkarApp() {
                           </div>
 
                           <div className="text-right mb-4">
-                            <p className={`leading-loose text-gray-800 dark:text-gray-100 mt-2 ${isAyatAlKursi ? "text-2xl" : "text-xl"}`}>
+                            <p
+                              className={`leading-loose text-gray-800 dark:text-gray-100 mt-2 ${isAyatAlKursi ? "text-2xl" : "text-xl"}`}
+                            >
                               {verse.arabic}
                             </p>
                           </div>
@@ -781,20 +812,26 @@ export default function AzkarApp() {
                     return (
                       <button
                         key={index}
-                        ref={(el) => { dayButtonRefs.current[dateKey] = el }}
+                        ref={(el) => {
+                          dayButtonRefs.current[dateKey] = el
+                        }}
                         onClick={() => setSelectedDate(date)}
                         className={`flex flex-col items-center justify-center min-w-[60px] py-3 px-2 rounded-xl transition-all shadow-none ${
                           isSelected
                             ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg scale-105"
                             : isToday
-                            ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 text-blue-700 dark:text-blue-300 border-2 border-blue-300 dark:border-blue-700"
-                            : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                              ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 text-blue-700 dark:text-blue-300 border-2 border-blue-300 dark:border-blue-700"
+                              : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30"
                         }`}
                       >
-                        <span className={`text-xs font-medium mb-1 ${isSelected ? "text-blue-100" : isToday ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}`}>
+                        <span
+                          className={`text-xs font-medium mb-1 ${isSelected ? "text-blue-100" : isToday ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}`}
+                        >
                           {formatDayName(date)}
                         </span>
-                        <span className={`text-lg font-bold ${isSelected ? "text-white" : isToday ? "text-blue-700 dark:text-blue-300" : "text-gray-800 dark:text-gray-200"}`}>
+                        <span
+                          className={`text-lg font-bold ${isSelected ? "text-white" : isToday ? "text-blue-700 dark:text-blue-300" : "text-gray-800 dark:text-gray-200"}`}
+                        >
                           {date.getDate()}
                         </span>
                       </button>
@@ -809,7 +846,8 @@ export default function AzkarApp() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">
-                        {isSameDay(selectedDate, new Date()) ? "Today's" : formatDayName(selectedDate) + "'s"} Prayer Times
+                        {isSameDay(selectedDate, new Date()) ? "Today's" : formatDayName(selectedDate) + "'s"} Prayer
+                        Times
                       </h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         {location.city}, {location.country}
@@ -867,14 +905,22 @@ export default function AzkarApp() {
                         <div className="flex items-center gap-3">
                           <span className="text-2xl">{prayer.icon}</span>
                           <div>
-                            <h4 className={`font-semibold ${isNext ? "text-blue-800 dark:text-blue-200" : "text-gray-800 dark:text-gray-100"}`}>
+                            <h4
+                              className={`font-semibold ${isNext ? "text-blue-800 dark:text-blue-200" : "text-gray-800 dark:text-gray-100"}`}
+                            >
                               {prayer.name}
                             </h4>
-                            {isNext && <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Next Prayer - {countdown}</p>}
+                            {isNext && (
+                              <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                                Next Prayer - {countdown}
+                              </p>
+                            )}
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className={`font-bold text-lg ${isNext ? "text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-300"}`}>
+                          <p
+                            className={`font-bold text-lg ${isNext ? "text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-300"}`}
+                          >
                             {convertTo12Hour(prayer.time)}
                           </p>
                         </div>
@@ -958,11 +1004,17 @@ export default function AzkarApp() {
             <button
               onClick={() => setMainTab("duaa")}
               className={`flex flex-col items-center justify-center flex-1 py-2 px-3 rounded-xl transition-all ${
-                mainTab === "duaa" ? "bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-900/30 dark:to-emerald-900/30" : "hover:bg-gray-50 dark:hover:bg-gray-700"
+                mainTab === "duaa"
+                  ? "bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-900/30 dark:to-emerald-900/30"
+                  : "hover:bg-gray-50 dark:hover:bg-gray-700"
               }`}
             >
-              <Heart className={`mb-1 h-4 w-4 ${mainTab === "duaa" ? "text-teal-600 dark:text-teal-400" : "text-gray-400"}`} />
-              <span className={`text-xs font-semibold ${mainTab === "duaa" ? "text-teal-600 dark:text-teal-400" : "text-gray-500 dark:text-gray-400"}`}>
+              <Heart
+                className={`mb-1 h-4 w-4 ${mainTab === "duaa" ? "text-teal-600 dark:text-teal-400" : "text-gray-400"}`}
+              />
+              <span
+                className={`text-xs font-semibold ${mainTab === "duaa" ? "text-teal-600 dark:text-teal-400" : "text-gray-500 dark:text-gray-400"}`}
+              >
                 Duaa
               </span>
             </button>
@@ -970,11 +1022,17 @@ export default function AzkarApp() {
             <button
               onClick={() => setMainTab("hadith")}
               className={`flex flex-col items-center justify-center flex-1 py-2 px-3 rounded-xl transition-all ${
-                mainTab === "hadith" ? "bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-900/30 dark:to-emerald-900/30" : "hover:bg-gray-50 dark:hover:bg-gray-700"
+                mainTab === "hadith"
+                  ? "bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-900/30 dark:to-emerald-900/30"
+                  : "hover:bg-gray-50 dark:hover:bg-gray-700"
               }`}
             >
-              <BookOpen className={`mb-1 w-4 h-4 ${mainTab === "hadith" ? "text-teal-600 dark:text-teal-400" : "text-gray-400"}`} />
-              <span className={`text-xs font-semibold ${mainTab === "hadith" ? "text-teal-600 dark:text-teal-400" : "text-gray-500 dark:text-gray-400"}`}>
+              <BookOpen
+                className={`mb-1 w-4 h-4 ${mainTab === "hadith" ? "text-teal-600 dark:text-teal-400" : "text-gray-400"}`}
+              />
+              <span
+                className={`text-xs font-semibold ${mainTab === "hadith" ? "text-teal-600 dark:text-teal-400" : "text-gray-500 dark:text-gray-400"}`}
+              >
                 Hadith
               </span>
             </button>
@@ -982,11 +1040,17 @@ export default function AzkarApp() {
             <button
               onClick={() => setMainTab("quran")}
               className={`flex flex-col items-center justify-center flex-1 py-2 px-3 rounded-xl transition-all ${
-                mainTab === "quran" ? "bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/30 dark:to-indigo-900/30" : "hover:bg-gray-50 dark:hover:bg-gray-700"
+                mainTab === "quran"
+                  ? "bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/30 dark:to-indigo-900/30"
+                  : "hover:bg-gray-50 dark:hover:bg-gray-700"
               }`}
             >
-              <BookMarked className={`mb-1 h-4 w-4 ${mainTab === "quran" ? "text-purple-600 dark:text-purple-400" : "text-gray-400"}`} />
-              <span className={`text-xs font-semibold ${mainTab === "quran" ? "text-purple-600 dark:text-purple-400" : "text-gray-500 dark:text-gray-400"}`}>
+              <BookMarked
+                className={`mb-1 h-4 w-4 ${mainTab === "quran" ? "text-purple-600 dark:text-purple-400" : "text-gray-400"}`}
+              />
+              <span
+                className={`text-xs font-semibold ${mainTab === "quran" ? "text-purple-600 dark:text-purple-400" : "text-gray-500 dark:text-gray-400"}`}
+              >
                 Quran
               </span>
             </button>
@@ -994,11 +1058,17 @@ export default function AzkarApp() {
             <button
               onClick={() => setMainTab("pray")}
               className={`flex flex-col items-center justify-center flex-1 px-3 rounded-xl transition-all py-2 ${
-                mainTab === "pray" ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30" : "hover:bg-gray-50 dark:hover:bg-gray-700"
+                mainTab === "pray"
+                  ? "bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30"
+                  : "hover:bg-gray-50 dark:hover:bg-gray-700"
               }`}
             >
-              <Clock className={`mb-1 w-4 h-4 ${mainTab === "pray" ? "text-blue-600 dark:text-blue-400" : "text-gray-400"}`} />
-              <span className={`text-xs font-semibold ${mainTab === "pray" ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}`}>
+              <Clock
+                className={`mb-1 w-4 h-4 ${mainTab === "pray" ? "text-blue-600 dark:text-blue-400" : "text-gray-400"}`}
+              />
+              <span
+                className={`text-xs font-semibold ${mainTab === "pray" ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}`}
+              >
                 Pray
               </span>
             </button>
