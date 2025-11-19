@@ -549,7 +549,7 @@ export default function AzkarApp() {
                                   e.stopPropagation()
                                   playQuranAudio("surah", surah.number)
                                 }}
-                                className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/50 hover:bg-purple-200 dark:hover:bg-purple-900/70 transition-colors"
+                                className="p-2 rounded-lg bg-purple-100 dark:bg-[rgba(0,0,0,0.25)] hover:bg-purple-200 dark:hover:bg-purple-900/70 transition-colors"
                               >
                                 {loadingAudioId === `surah-${surah.number}` ? (
                                   <Loader2 className="w-5 h-5 text-purple-600 dark:text-purple-400 animate-spin" />
@@ -664,7 +664,7 @@ export default function AzkarApp() {
                                 e.stopPropagation()
                                 playQuranAudio("ayah", selectedSurah.number, verse.number)
                               }}
-                              className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/50 hover:bg-purple-200 dark:hover:bg-purple-900/70 transition-colors"
+                              className="p-1.5 rounded-lg bg-purple-100 dark:bg-[rgba(0,0,0,0.25)] hover:bg-purple-200 dark:hover:bg-purple-900/70 transition-colors"
                             >
                               {loadingAudioId === `ayah-${selectedSurah.number}-${verse.number}` ? (
                                 <Loader2 className="w-4 h-4 text-purple-600 dark:text-purple-400 animate-spin" />
