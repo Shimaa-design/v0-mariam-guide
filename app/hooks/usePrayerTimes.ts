@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect, useRef } from "react"
 import { getWeekDates, formatDayName, isSameDay, convertTo12Hour, formatTime } from "../utils/helpers"
 
@@ -44,6 +46,50 @@ export function usePrayerTimes(mainTab: string) {
     setSelectedDate(new Date())
   }
 
+  // Helper to fetch prayer times for a specific date
+  const fetchPrayerTimesForDate = async (date: Date, locationInfo: LocationData) => {
+    const dateKey = date.toDateString()
+
+    // Skip if already cached
+    if (prayerTimesCache.current[dateKey]) {
+      return { success: true, dateKey, data: prayerTimesCache.current[dateKey] }
+    }
+
+    try {
+      const prayerResponse = await fetch(
+        `https://api.aladhan.com/v1/timings/${Math.floor(date.getTime() / 1000)}?latitude=${locationInfo.latitude}&longitude=${locationInfo.longitude}&method=2`,
+      )
+
+      if (!prayerResponse.ok) {
+        throw new Error(`API returned ${prayerResponse.status}`)
+      }
+
+      const prayerData = await prayerResponse.json()
+
+      if (prayerData.code === 200) {
+        const timings = prayerData.data.timings
+        const newPrayerTimes = {
+          Fajr: timings.Fajr,
+          Dhuhr: timings.Dhuhr,
+          Asr: timings.Asr,
+          Maghrib: timings.Maghrib,
+          Isha: timings.Isha,
+          Jumuah: timings.Dhuhr, // Jumuah (Friday prayer) is at Dhuhr time
+        }
+
+        // Cache the prayer times for this date
+        prayerTimesCache.current[dateKey] = newPrayerTimes
+        return { success: true, dateKey, data: newPrayerTimes }
+      } else {
+        console.warn(`Failed to fetch prayer times for ${dateKey}:`, prayerData)
+        return { success: false, dateKey, error: prayerData.status || "Unknown API error" }
+      }
+    } catch (err) {
+      console.warn(`Error fetching prayer times for ${dateKey}:`, err)
+      return { success: false, dateKey, error: err instanceof Error ? err.message : "Network error" }
+    }
+  }
+
   // Fetch location and prayer times for all week days
   useEffect(() => {
     const fetchLocationAndPrayer = async () => {
@@ -51,7 +97,12 @@ export function usePrayerTimes(mainTab: string) {
 
       // Check if we already have all week data cached
       const weekDates = getWeekDates()
-      const allCached = weekDates.every(date => prayerTimesCache.current[date.toDateString()])
+      const datesToFetch = [...weekDates]
+      if (!weekDates.some((d) => isSameDay(d, selectedDate))) {
+        datesToFetch.push(selectedDate)
+      }
+
+      const allCached = datesToFetch.every((date) => prayerTimesCache.current[date.toDateString()])
 
       if (allCached) {
         // Set prayer times for currently selected date from cache
@@ -73,37 +124,68 @@ export function usePrayerTimes(mainTab: string) {
 
         if (savedLocation && savedDate === today) {
           // Use saved location if it's from today
-          locationInfo = JSON.parse(savedLocation)
-          setLocation(locationInfo)
-        } else {
-          // Get location from browser geolocation API
-          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              timeout: 10000, // 10 second timeout
-              enableHighAccuracy: false, // Faster, less battery
-              maximumAge: 300000 // Accept cached position up to 5 minutes old
-            })
-          })
-
-          const { latitude, longitude } = position.coords
-
-          // Fetch location name from reverse geocoding API
-          const locationResponse = await fetch(
-            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
-          )
-          const locationData = await locationResponse.json()
-
-          locationInfo = {
-            city: locationData.city || locationData.locality || "Unknown",
-            country: locationData.countryName || "Unknown",
-            latitude,
-            longitude,
+          try {
+            locationInfo = JSON.parse(savedLocation)
+            setLocation(locationInfo)
+          } catch (e) {
+            console.error("Error parsing saved location", e)
+            localStorage.removeItem("mariam-guide-location")
           }
-          setLocation(locationInfo)
+        }
 
-          // Save location to localStorage
-          localStorage.setItem("mariam-guide-location", JSON.stringify(locationInfo))
-          localStorage.setItem("mariam-guide-location-date", today)
+        if (!locationInfo) {
+          // Get location from browser geolocation API
+          try {
+            const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                timeout: 10000, // 10 second timeout
+                enableHighAccuracy: false, // Faster, less battery
+                maximumAge: 300000, // Accept cached position up to 5 minutes old
+              })
+            })
+
+            const { latitude, longitude } = position.coords
+
+            // Fetch location name from reverse geocoding API
+            try {
+              const locationResponse = await fetch(
+                `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
+              )
+              const locationData = await locationResponse.json()
+
+              locationInfo = {
+                city: locationData.city || locationData.locality || "Unknown",
+                country: locationData.countryName || "Unknown",
+                latitude,
+                longitude,
+              }
+            } catch (locErr) {
+              console.warn("Reverse geocoding failed, using coordinates only", locErr)
+              locationInfo = {
+                city: "Current Location",
+                country: "",
+                latitude,
+                longitude,
+              }
+            }
+
+            setLocation(locationInfo)
+
+            // Save location to localStorage
+            localStorage.setItem("mariam-guide-location", JSON.stringify(locationInfo))
+            localStorage.setItem("mariam-guide-location-date", today)
+          } catch (geoError) {
+            console.warn("Geolocation failed, falling back to default location (Mecca)", geoError)
+            // Fallback to Mecca if geolocation fails
+            locationInfo = {
+              city: "Mecca",
+              country: "Saudi Arabia",
+              latitude: 21.3891,
+              longitude: 39.8579,
+            }
+            setLocation(locationInfo)
+            // Don't save fallback to localStorage to retry next time
+          }
         }
 
         // Fetch prayer times from Aladhan API
@@ -111,54 +193,26 @@ export function usePrayerTimes(mainTab: string) {
           throw new Error("Failed to get location")
         }
 
-        // Fetch prayer times for all days in the week
-        const results = await Promise.allSettled(weekDates.map(async (date) => {
-          const dateKey = date.toDateString()
-
-          // Skip if already cached
-          if (prayerTimesCache.current[dateKey]) {
-            return { success: true, dateKey }
-          }
-
-          try {
-            const prayerResponse = await fetch(
-              `https://api.aladhan.com/v1/timings/${Math.floor(date.getTime() / 1000)}?latitude=${locationInfo.latitude}&longitude=${locationInfo.longitude}&method=2`,
-            )
-            const prayerData = await prayerResponse.json()
-
-            if (prayerData.code === 200) {
-              const timings = prayerData.data.timings
-              const newPrayerTimes = {
-                Fajr: timings.Fajr,
-                Dhuhr: timings.Dhuhr,
-                Asr: timings.Asr,
-                Maghrib: timings.Maghrib,
-                Isha: timings.Isha,
-                Jumuah: timings.Dhuhr, // Jumuah (Friday prayer) is at Dhuhr time
-              }
-
-              // Cache the prayer times for this date
-              prayerTimesCache.current[dateKey] = newPrayerTimes
-              return { success: true, dateKey }
-            } else {
-              console.warn(`Failed to fetch prayer times for ${dateKey}:`, prayerData)
-              return { success: false, dateKey }
-            }
-          } catch (err) {
-            console.warn(`Error fetching prayer times for ${dateKey}:`, err)
-            return { success: false, dateKey }
-          }
-        }))
+        // Fetch prayer times for all days in the week + selected date
+        await Promise.allSettled(datesToFetch.map((date) => fetchPrayerTimesForDate(date, locationInfo!)))
 
         // Set prayer times for currently selected date
         const dateKey = selectedDate.toDateString()
         const selectedDatePrayer = prayerTimesCache.current[dateKey]
 
         if (!selectedDatePrayer) {
-          throw new Error("Failed to fetch prayer times for the selected date. Please try again.")
+          // Try one more time specifically for selected date if it failed
+          const retryResult = await fetchPrayerTimesForDate(selectedDate, locationInfo)
+          if (retryResult.success && retryResult.data) {
+            setPrayerTimes(retryResult.data)
+          } else {
+            throw new Error(
+              "Failed to fetch prayer times for the selected date. Please check your internet connection.",
+            )
+          }
+        } else {
+          setPrayerTimes(selectedDatePrayer)
         }
-
-        setPrayerTimes(selectedDatePrayer)
 
         setIsLoadingPrayer(false)
       } catch (error) {
@@ -189,9 +243,10 @@ export function usePrayerTimes(mainTab: string) {
     }
 
     fetchLocationAndPrayer()
-  }, [mainTab])
+  }, [mainTab, selectedDate]) // Added selectedDate dependency to refetch if needed
 
   // Update displayed prayer times when selected date changes
+  /* 
   useEffect(() => {
     if (mainTab !== "pray") return
 
@@ -200,6 +255,7 @@ export function usePrayerTimes(mainTab: string) {
       setPrayerTimes(prayerTimesCache.current[dateKey])
     }
   }, [selectedDate, mainTab])
+  */
 
   // Calculate next prayer and countdown
   useEffect(() => {
@@ -270,7 +326,7 @@ export function usePrayerTimes(mainTab: string) {
       selectedButton.scrollIntoView({
         behavior: "smooth",
         block: "nearest",
-        inline: "center"
+        inline: "center",
       })
     }
   }, [selectedDate, mainTab])
