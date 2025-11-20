@@ -100,6 +100,33 @@ export default function AzkarApp() {
   const { isPlayingAdhan, adhanAudioRef, toggleAdhan } = useAdhanAudio()
   const { playingDuaaId, speechSynthesisRef, arabicVoiceAvailable, playDuaaAudio } = useDuaaAudio()
 
+  const playClickSound = () => {
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext
+      if (!AudioContext) return
+
+      const audioCtx = new AudioContext()
+      const oscillator = audioCtx.createOscillator()
+      const gainNode = audioCtx.createGain()
+
+      oscillator.connect(gainNode)
+      gainNode.connect(audioCtx.destination)
+
+      // Create a "pop" sound
+      oscillator.type = "sine"
+      oscillator.frequency.setValueAtTime(600, audioCtx.currentTime)
+      oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.15)
+
+      gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime)
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1)
+
+      oscillator.start()
+      oscillator.stop(audioCtx.currentTime + 0.15)
+    } catch (e) {
+      console.error("Audio play failed", e)
+    }
+  }
+
   // Use Quran custom hook
   const {
     quranData,
@@ -198,6 +225,7 @@ export default function AzkarApp() {
                   gratitude: "Gratitude",
                   seeking_knowledge: "Knowledge",
                   illness: "Illness",
+                  death: "Death"
                 }
                 return (
                   <button
@@ -330,10 +358,11 @@ export default function AzkarApp() {
                             {!isCompleted && (
                               <button
                                 onClick={() => {
+                                  playClickSound() // Added sound effect
                                   setRippleState({ id: dhikr.id, key: Date.now() })
                                   handleIncrement(dhikr.id, dhikr.count, index)
                                 }}
-                                className={`relative overflow-hidden px-6 py-2 rounded-lg font-medium transition-all bg-gradient-to-r ${currentCategory.color} text-white hover:shadow-lg active:scale-95`}
+                                className={`relative overflow-hidden px-6 py-2 rounded-lg font-medium transition-all bg-gradient-to-r ${currentCategory.color} text-white hover:shadow-lg active:scale-110`}
                               >
                                 <span className="relative z-10">Count</span>
                                 {rippleState?.id === dhikr.id && (

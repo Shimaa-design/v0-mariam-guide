@@ -131,7 +131,7 @@
     opacity: 0.5;
   }
   100% {
-    transform: scale(4);
+    transform: scale(15); /* Increased scale from 4 to 15 for a much larger ripple */
     opacity: 0;
   }
 }
