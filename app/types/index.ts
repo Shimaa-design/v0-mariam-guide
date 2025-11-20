@@ -17,6 +17,7 @@ export interface QuranSurah {
 
 export interface PrayerTimes {
   Fajr: string
+  Sunrise: string
   Dhuhr: string
   Asr: string
   Maghrib: string
