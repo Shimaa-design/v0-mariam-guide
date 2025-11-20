@@ -18,6 +18,7 @@ import {
   Heart,
   Clock,
   AlertCircle,
+  ArrowUpDown,
 } from "lucide-react"
 import { Toaster } from "sonner"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -114,6 +115,10 @@ export default function AzkarApp() {
     loadingAudioId,
     showReciterDropdown,
     ayahRefs,
+    sortOption,
+    setSortOption,
+    showSortDropdown,
+    setShowSortDropdown,
     setBookmark,
     continueReading,
     openSurah,
@@ -152,10 +157,10 @@ export default function AzkarApp() {
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center gap-3 mb-0 justify-between">
             <div className="flex items-center gap-3">
-              {mainTab === "duaa" && <currentCategory.icon className="w-7 h-7" />}
-              {mainTab === "hadith" && <BookOpen className="w-7 h-7" />}
-              {mainTab === "quran" && <BookMarked className="w-7 h-7" />}
-              {mainTab === "pray" && <Clock className="w-7 h-7" />}
+              {mainTab === "duaa" && <currentCategory.icon className="size-6" />}
+              {mainTab === "hadith" && <BookOpen className="size-6" />}
+              {mainTab === "quran" && <BookMarked className="size-auto" />}
+              {mainTab === "pray" && <Clock className="size-auto" />}
               <h1 className="font-bold text-2xl">Mariam Guide</h1>
             </div>
             <ThemeToggle />
@@ -170,9 +175,9 @@ export default function AzkarApp() {
       </div>
 
       {mainTab === "duaa" && (
-        <div className="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-10">
+        <div className="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-10 py-2">
           <div className="max-w-4xl mx-auto px-4">
-            <div ref={categoryNavRef} className="flex gap-2 overflow-x-auto py-4 scrollbar-hide">
+            <div ref={categoryNavRef} className="flex gap-2 overflow-x-auto scrollbar-hide">
               {Object.entries(azkarData).map(([key, data]) => {
                 const Icon = data.icon
                 const categoryNames: Record<string, string> = {
@@ -417,7 +422,7 @@ export default function AzkarApp() {
       )}
 
       {mainTab === "quran" && (
-        <div className="max-w-4xl mx-auto p-4 pb-8 pt-4">
+        <div className="max-w-4xl mx-auto p-4 pb-8 pt-5">
           {isLoadingQuran && (
             <div className="flex flex-col items-center justify-center py-20">
               <Loader2 className="w-12 h-12 text-purple-500 animate-spin mb-4" />
@@ -458,45 +463,108 @@ export default function AzkarApp() {
             <>
               {quranView === "list" && (
                 <>
-                  <div className="mb-4 relative">
-                    <button
-                      onClick={() => setShowReciterDropdown(!showReciterDropdown)}
-                      className="w-full bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 hover:shadow-lg transition-all flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Volume2 className="w-5 h-5 text-purple-500" />
-                        <div className="text-left">
-                          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Reciter</p>
-                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                            {RECITERS.find((r) => r.id === selectedReciter)?.name}
-                          </p>
+                  <div className="mb-4 flex gap-3">
+                    {/* Reciter Dropdown */}
+                    <div className="relative flex-1">
+                      <button
+                        onClick={() => {
+                          setShowReciterDropdown(!showReciterDropdown)
+                          setShowSortDropdown(false)
+                        }}
+                        className="w-full bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 hover:shadow-lg transition-all flex items-center justify-between h-full"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Volume2 className="w-5 h-5 text-purple-500" />
+                          <div className="text-left">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Reciter</p>
+                            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 line-clamp-1">
+                              {RECITERS.find((r) => r.id === selectedReciter)?.name}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      <ChevronLeft
-                        className={`w-5 h-5 text-gray-400 transition-transform ${showReciterDropdown ? "rotate-90" : "-rotate-90"}`}
-                      />
-                    </button>
+                        <ChevronLeft
+                          className={`w-5 h-5 text-gray-400 transition-transform ${showReciterDropdown ? "rotate-90" : "-rotate-90"}`}
+                        />
+                      </button>
 
-                    {showReciterDropdown && (
-                      <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border-2 border-purple-200 dark:border-purple-800 z-20 max-h-64 overflow-y-auto">
-                        {RECITERS.map((reciter) => (
-                          <button
-                            key={reciter.id}
-                            onClick={() => {
-                              setSelectedReciter(reciter.id)
-                              setShowReciterDropdown(false)
-                              stopQuranAudio()
-                            }}
-                            className={`w-full p-4 text-left hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0 ${
-                              selectedReciter === reciter.id ? "bg-purple-100 dark:bg-purple-900/50" : ""
-                            }`}
-                          >
-                            <p className="font-semibold text-gray-800 dark:text-gray-200">{reciter.name}</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 text-right">{reciter.arabicName}</p>
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                      {showReciterDropdown && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border-2 border-purple-200 dark:border-purple-800 z-20 max-h-64 overflow-y-auto">
+                          {RECITERS.map((reciter) => (
+                            <button
+                              key={reciter.id}
+                              onClick={() => {
+                                setSelectedReciter(reciter.id)
+                                setShowReciterDropdown(false)
+                                stopQuranAudio()
+                              }}
+                              className={`w-full p-4 text-left hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0 ${
+                                selectedReciter === reciter.id ? "bg-purple-100 dark:bg-purple-900/50" : ""
+                              }`}
+                            >
+                              <p className="font-semibold text-gray-800 dark:text-gray-200 text-xs">{reciter.name}</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 text-right">
+                                {reciter.arabicName}
+                              </p>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Sort Dropdown */}
+                    <div className="relative flex-1">
+                      <button
+                        onClick={() => {
+                          setShowSortDropdown(!showSortDropdown)
+                          setShowReciterDropdown(false)
+                        }}
+                        className="w-full bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 hover:shadow-lg transition-all flex items-center justify-between h-full"
+                      >
+                        <div className="flex items-center gap-3">
+                          <ArrowUpDown className="w-5 h-5 text-purple-500" />
+                          <div className="text-left">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Sort By</p>
+                            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 line-clamp-1">
+                              {sortOption === "number" && "Surah Number"}
+                              {sortOption === "alphabetical-en" && "Alphabetical (A-Z)"}
+                              {sortOption === "alphabetical-ar" && "Alphabetical (Arabic)"}
+                              {sortOption === "verses-desc" && "Most Verses"}
+                              {sortOption === "verses-asc" && "Fewest Verses"}
+                              {sortOption === "revelation-order" && "Revelation Order"}
+                            </p>
+                          </div>
+                        </div>
+                        <ChevronLeft
+                          className={`w-5 h-5 text-gray-400 transition-transform ${showSortDropdown ? "rotate-90" : "-rotate-90"}`}
+                        />
+                      </button>
+
+                      {showSortDropdown && (
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border-2 border-purple-200 dark:border-purple-800 z-20 overflow-hidden">
+                          {[
+                            { id: "number", label: "Surah Number (Default)" },
+                            { id: "revelation-order", label: "Revelation Order (Chronological)" },
+                            { id: "alphabetical-en", label: "Alphabetical (English)" },
+                            { id: "alphabetical-ar", label: "Alphabetical (Arabic)" },
+                            { id: "verses-desc", label: "Most Verses (High to Low)" },
+                            { id: "verses-asc", label: "Fewest Verses (Low to High)" },
+                          ].map((option) => (
+                            <button
+                              key={option.id}
+                              onClick={() => {
+                                setSortOption(option.id as any)
+                                setShowSortDropdown(false)
+                              }}
+                              className={`w-full p-4 text-left hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0 ${
+                                sortOption === option.id ? "bg-purple-100 dark:bg-purple-900/50" : ""
+                              }`}
+                            >
+                              <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{option.label}</p>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {isFriday() && (
@@ -565,7 +633,7 @@ export default function AzkarApp() {
                               <div className="text-right">
                                 <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">{surah.name}</h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400 text-left leading-3 py-0 pt-2">
-                                  {surah.verses.length} verses
+                                  {surah.englishName || surah.name}
                                 </p>
                               </div>
                             </div>
@@ -660,14 +728,6 @@ export default function AzkarApp() {
                                 : "bg-white dark:bg-gray-800 shadow-md hover:shadow-lg hover:scale-[1.01]"
                           }`}
                         >
-                          {isAyatAlKursi && (
-                            <div className="mb-3 flex items-center gap-2">
-                              <span className="px-3 py-1 bg-amber-500 text-white text-xs font-bold rounded-full">
-                                ⭐ {verse.specialName}
-                              </span>
-                            </div>
-                          )}
-
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-semibold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full border-none border-0">
@@ -687,22 +747,29 @@ export default function AzkarApp() {
                                 {isBookmarked ? "🔖 Bookmarked" : "Bookmark"}
                               </button>
                             </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                playQuranAudio("ayah", selectedSurah.number, verse.number)
-                              }}
-                              className="p-1.5 rounded-lg bg-purple-100 dark:bg-[rgba(0,0,0,0.25)] hover:bg-purple-200 dark:hover:bg-purple-900/70 transition-colors"
-                            >
-                              {loadingAudioId === `ayah-${selectedSurah.number}-${verse.number}` ? (
-                                <Loader2 className="w-4 h-4 text-purple-600 dark:text-purple-400 animate-spin" />
-                              ) : playingAudioType === "ayah" &&
-                                playingAudioId === `ayah-${selectedSurah.number}-${verse.number}` ? (
-                                <Pause className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                              ) : (
-                                <Play className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                            <div className="flex items-center gap-2">
+                              {isAyatAlKursi && (
+                                <span className="px-3 py-1 bg-amber-500 text-white font-bold rounded-full text-sm">
+                                  ⭐ {verse.specialName}
+                                </span>
                               )}
-                            </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  playQuranAudio("ayah", selectedSurah.number, verse.number)
+                                }}
+                                className="p-1.5 bg-purple-100 dark:bg-[rgba(0,0,0,0.25)] hover:bg-purple-200 dark:hover:bg-purple-900/70 transition-colors rounded-md"
+                              >
+                                {loadingAudioId === `ayah-${selectedSurah.number}-${verse.number}` ? (
+                                  <Loader2 className="w-4 h-4 text-purple-600 dark:text-purple-400 animate-spin" />
+                                ) : playingAudioType === "ayah" &&
+                                  playingAudioId === `ayah-${selectedSurah.number}-${verse.number}` ? (
+                                  <Pause className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                                ) : (
+                                  <Play className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                                )}
+                              </button>
+                            </div>
                           </div>
 
                           <div className="text-right mb-4">
@@ -734,7 +801,7 @@ export default function AzkarApp() {
                       <button
                         onClick={goToPreviousSurah}
                         disabled={quranData.findIndex((s) => s.number === selectedSurah.number) === 0}
-                        className={`flex-1 h-12 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                        className={`flex-1 h-12 px-6 font-semibold transition-all flex items-center justify-center gap-2 border-none shadow-md rounded-lg ${
                           quranData.findIndex((s) => s.number === selectedSurah.number) === 0
                             ? "bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed"
                             : "bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 border-2 border-purple-500 dark:border-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:shadow-lg"
@@ -746,7 +813,7 @@ export default function AzkarApp() {
 
                       <button
                         onClick={backToSurahList}
-                        className="h-12 px-6 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center"
+                        className="h-12 px-6 bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-semibold hover:shadow-lg transition-all flex items-center justify-center shadow-xl rounded-lg"
                       >
                         <List className="w-5 h-5" />
                       </button>
@@ -756,7 +823,7 @@ export default function AzkarApp() {
                         disabled={
                           quranData.findIndex((s) => s.number === selectedSurah.number) === quranData.length - 1
                         }
-                        className={`flex-1 h-12 px-6 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                        className={`flex-1 h-12 px-6 font-semibold transition-all flex items-center justify-center gap-2 border-none shadow-md rounded-lg ${
                           quranData.findIndex((s) => s.number === selectedSurah.number) === quranData.length - 1
                             ? "bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed"
                             : "bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 border-2 border-purple-500 dark:border-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 hover:shadow-lg"
@@ -858,8 +925,8 @@ export default function AzkarApp() {
                       onClick={toggleAdhan}
                       className={`px-4 py-2 rounded-lg font-medium text-white shadow-md transition-all hover:shadow-lg active:scale-95 ${
                         isPlayingAdhan
-                          ? "bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700"
-                          : "bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700"
+                          ? "bg-gradient-to-r from-indigo-600 to-blue-700 hover:from-indigo-700 hover:to-blue-800"
+                          : "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
                       }`}
                     >
                       <div className="flex items-center gap-2">

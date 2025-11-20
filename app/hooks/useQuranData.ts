@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { toast } from "sonner"
 
 interface QuranVerse {
@@ -9,6 +9,7 @@ interface QuranVerse {
   english: string
   isSpecial?: boolean
   specialName?: string
+  hasSpecialReminder?: boolean
 }
 
 interface QuranSurah {
@@ -17,7 +18,16 @@ interface QuranSurah {
   englishName?: string
   verses: QuranVerse[]
   hasSpecialReminder?: boolean
+  revelationOrder?: number
 }
+
+export type SortOption =
+  | "number"
+  | "alphabetical-en"
+  | "alphabetical-ar"
+  | "verses-desc"
+  | "verses-asc"
+  | "revelation-order"
 
 const RECITERS = [
   { id: "ar.alafasy", name: "Mishary Rashid Alafasy", arabicName: "مشاري راشد العفاسي" },
@@ -41,6 +51,10 @@ export function useQuranData(mainTab: string) {
   const [quranError, setQuranError] = useState<string | null>(null)
   const [loadingProgress, setLoadingProgress] = useState(0)
 
+  // Sort state
+  const [sortOption, setSortOption] = useState<SortOption>("number")
+  const [showSortDropdown, setShowSortDropdown] = useState(false)
+
   // Audio state
   const [selectedReciter, setSelectedReciter] = useState(RECITERS[0].id)
   const [playingAudioType, setPlayingAudioType] = useState<"surah" | "ayah" | null>(null)
@@ -52,8 +66,63 @@ export function useQuranData(mainTab: string) {
   const ayahRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const quranAudioRef = useRef<HTMLAudioElement | null>(null)
 
-  // Define fetchQuranData function at component level so it can be accessed by multiple useEffects
-  const fetchQuranData = useCallback(async () => {
+  // Load sort preference
+  useEffect(() => {
+    const savedSort = localStorage.getItem("mariam-guide-quran-sort")
+    if (savedSort) {
+      setSortOption(savedSort as SortOption)
+    }
+  }, [])
+
+  // Save sort preference
+  useEffect(() => {
+    localStorage.setItem("mariam-guide-quran-sort", sortOption)
+  }, [sortOption])
+
+  // Load cached Quran data and eagerly fetch if not cached
+  useEffect(() => {
+    const savedBookmark = localStorage.getItem("mariam-guide-quran-bookmark")
+    if (savedBookmark) {
+      try {
+        setQuranBookmark(JSON.parse(savedBookmark))
+      } catch (error) {
+        console.error("Failed to load quran bookmark:", error)
+      }
+    }
+
+    // Load cached Quran data and eagerly fetch if not cached
+    const cachedQuranData = localStorage.getItem("mariam-guide-quran-data")
+    const cachedVersion = localStorage.getItem("mariam-guide-quran-cache-version")
+    const CACHE_VERSION = "v1"
+
+    let hasValidCache = false
+
+    if (cachedQuranData && cachedVersion === CACHE_VERSION) {
+      try {
+        const parsedData = JSON.parse(cachedQuranData)
+        if (Array.isArray(parsedData) && parsedData.length > 0) {
+          console.log("[v0] Loading Quran data from cache...")
+          setQuranData(parsedData)
+          console.log(`[v0] Successfully loaded ${parsedData.length} surahs from cache`)
+          hasValidCache = true
+        }
+      } catch (error) {
+        console.error("Failed to load cached Quran data:", error)
+        // Clear invalid cache
+        localStorage.removeItem("mariam-guide-quran-data")
+        localStorage.removeItem("mariam-guide-quran-cache-version")
+      }
+    }
+
+    // Eagerly fetch Quran data if not already cached
+    if (!hasValidCache) {
+      console.log("[v0] No valid cache found, starting eager fetch of Quran data...")
+      fetchQuranData()
+    }
+  }, [])
+
+  // Fallback: Fetch Quran data if user navigates to tab before eager loading completes
+  const fetchQuranData = async () => {
     setIsLoadingQuran(true)
     setQuranError(null)
     setLoadingProgress(0)
@@ -132,6 +201,10 @@ export function useQuranData(mainTab: string) {
                 verse.specialName = "آية الكرسي"
               }
 
+              if (surahNumber === 18) {
+                verse.hasSpecialReminder = true
+              }
+
               return verse
             })
 
@@ -141,6 +214,7 @@ export function useQuranData(mainTab: string) {
               englishName: surahInfo.englishName,
               verses,
               hasSpecialReminder: surahNumber === 18,
+              revelationOrder: surahInfo.revelationOrder,
             }
 
             console.log(`[v0] Successfully fetched surah ${surahNumber}`)
@@ -198,57 +272,14 @@ export function useQuranData(mainTab: string) {
         })
       }
     }
-  }, [])
+  }
 
-  // Load cached Quran data and eagerly fetch if not cached
-  useEffect(() => {
-    const savedBookmark = localStorage.getItem("mariam-guide-quran-bookmark")
-    if (savedBookmark) {
-      try {
-        setQuranBookmark(JSON.parse(savedBookmark))
-      } catch (error) {
-        console.error("Failed to load quran bookmark:", error)
-      }
-    }
-
-    // Load cached Quran data and eagerly fetch if not cached
-    const cachedQuranData = localStorage.getItem("mariam-guide-quran-data")
-    const cachedVersion = localStorage.getItem("mariam-guide-quran-cache-version")
-    const CACHE_VERSION = "v1"
-
-    let hasValidCache = false
-
-    if (cachedQuranData && cachedVersion === CACHE_VERSION) {
-      try {
-        const parsedData = JSON.parse(cachedQuranData)
-        if (Array.isArray(parsedData) && parsedData.length > 0) {
-          console.log("[v0] Loading Quran data from cache...")
-          setQuranData(parsedData)
-          console.log(`[v0] Successfully loaded ${parsedData.length} surahs from cache`)
-          hasValidCache = true
-        }
-      } catch (error) {
-        console.error("Failed to load cached Quran data:", error)
-        // Clear invalid cache
-        localStorage.removeItem("mariam-guide-quran-data")
-        localStorage.removeItem("mariam-guide-quran-cache-version")
-      }
-    }
-
-    // Eagerly fetch Quran data if not already cached
-    if (!hasValidCache) {
-      console.log("[v0] No valid cache found, starting eager fetch of Quran data...")
-      fetchQuranData()
-    }
-  }, [fetchQuranData])
-
-  // Fallback: Fetch Quran data if user navigates to tab before eager loading completes
   useEffect(() => {
     if (mainTab === "quran" && quranData.length === 0 && !isLoadingQuran) {
       console.log("[v0] User switched to Quran tab, fetching data...")
       fetchQuranData()
     }
-  }, [mainTab, quranData.length, isLoadingQuran, fetchQuranData])
+  }, [mainTab, quranData.length, isLoadingQuran])
 
   // Save bookmark to localStorage
   useEffect(() => {
@@ -261,6 +292,25 @@ export function useQuranData(mainTab: string) {
       setQuranView("list")
     }
   }, [mainTab])
+
+  // Sort Quran data
+  const sortedQuranData = useMemo(() => {
+    const data = [...quranData]
+    switch (sortOption) {
+      case "alphabetical-en":
+        return data.sort((a, b) => (a.englishName || a.name).localeCompare(b.englishName || b.name))
+      case "alphabetical-ar":
+        return data.sort((a, b) => a.name.localeCompare(b.name))
+      case "verses-desc":
+        return data.sort((a, b) => b.verses.length - a.verses.length)
+      case "verses-asc":
+        return data.sort((a, b) => a.verses.length - b.verses.length)
+      case "revelation-order":
+        return data.sort((a, b) => (a.revelationOrder || 0) - (b.revelationOrder || 0))
+      default: // "number"
+        return data.sort((a, b) => a.number - b.number)
+    }
+  }, [quranData, sortOption])
 
   // Helper function to calculate global ayah number for audio API
   const getGlobalAyahNumber = (surahNumber: number, ayahNumber: number): number => {
@@ -459,7 +509,8 @@ export function useQuranData(mainTab: string) {
 
   return {
     // State
-    quranData,
+    quranData: sortedQuranData, // Return sorted data
+    originalQuranData: quranData, // Return original data if needed
     selectedSurah,
     expandedSurah,
     quranBookmark,
@@ -467,6 +518,12 @@ export function useQuranData(mainTab: string) {
     isLoadingQuran,
     quranError,
     loadingProgress,
+
+    // Sort state
+    sortOption,
+    setSortOption,
+    showSortDropdown,
+    setShowSortDropdown,
 
     // Audio state
     selectedReciter,

@@ -12,6 +12,7 @@ export interface QuranSurah {
   englishName?: string
   verses: QuranVerse[]
   hasSpecialReminder?: boolean
+  revelationOrder?: number
 }
 
 export interface PrayerTimes {
