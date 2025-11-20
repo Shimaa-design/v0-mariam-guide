@@ -534,7 +534,7 @@ export default function AzkarApp() {
                       </button>
 
                       {showReciterDropdown && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border-purple-200 dark:border-purple-800 z-20  overflow-y-auto border-0">
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border-purple-200 dark:border-purple-800 z-20  overflow-y-auto border-2">
                           {RECITERS.map((reciter) => (
                             <button
                               key={reciter.id}
@@ -586,7 +586,7 @@ export default function AzkarApp() {
                       </button>
 
                       {showSortDropdown && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border-purple-200 dark:border-purple-800 z-20 overflow-hidden border-0">
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border-purple-200 dark:border-purple-800 z-20 overflow-hidden border-2">
                           {[
                             { id: "number", label: "Surah Number (Default)" },
                             { id: "revelation-order", label: "Revelation Order (Chronological)" },
