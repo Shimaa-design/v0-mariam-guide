@@ -5,6 +5,7 @@ import { getWeekDates, formatDayName, isSameDay, convertTo12Hour, formatTime } f
 
 interface PrayerTimes {
   Fajr: string
+  Sunrise: string
   Dhuhr: string
   Asr: string
   Maghrib: string
@@ -70,6 +71,7 @@ export function usePrayerTimes(mainTab: string) {
         const timings = prayerData.data.timings
         const newPrayerTimes = {
           Fajr: timings.Fajr,
+          Sunrise: timings.Sunrise,
           Dhuhr: timings.Dhuhr,
           Asr: timings.Asr,
           Maghrib: timings.Maghrib,

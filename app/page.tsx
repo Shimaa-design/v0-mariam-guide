@@ -996,6 +996,7 @@ export default function AzkarApp() {
 
                   return [
                     { name: "Fajr", time: prayerTimes.Fajr, icon: "🌅" },
+                    { name: "Sunrise", time: prayerTimes.Sunrise, icon: "🌄" },
                     isFriday
                       ? { name: "Jumuah", time: prayerTimes.Jumuah, icon: "🕌" }
                       : { name: "Dhuhr", time: prayerTimes.Dhuhr, icon: "☀️" },
