@@ -534,7 +534,7 @@ export default function AzkarApp() {
                       </button>
 
                       {showReciterDropdown && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border-2 border-purple-200 dark:border-purple-800 z-20 max-h-64 overflow-y-auto">
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border-purple-200 dark:border-purple-800 z-20  overflow-y-auto border-0">
                           {RECITERS.map((reciter) => (
                             <button
                               key={reciter.id}
@@ -543,7 +543,7 @@ export default function AzkarApp() {
                                 setShowReciterDropdown(false)
                                 stopQuranAudio()
                               }}
-                              className={`w-full p-4 text-left hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors border-b border-gray-100 dark:border-gray-700 last:border-b-0 ${
+                              className={`w-full p-4 text-left hover:bg-purple-50 dark:hover:bg-purple-900/30 transition-colors border-gray-100 dark:border-gray-700 last:border-b-0 border-b ${
                                 selectedReciter === reciter.id ? "bg-purple-100 dark:bg-purple-900/50" : ""
                               }`}
                             >
@@ -586,7 +586,7 @@ export default function AzkarApp() {
                       </button>
 
                       {showSortDropdown && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border-2 border-purple-200 dark:border-purple-800 z-20 overflow-hidden">
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-xl border-purple-200 dark:border-purple-800 z-20 overflow-hidden border-0">
                           {[
                             { id: "number", label: "Surah Number (Default)" },
                             { id: "revelation-order", label: "Revelation Order (Chronological)" },
