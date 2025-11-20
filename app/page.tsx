@@ -547,7 +547,7 @@ export default function AzkarApp() {
                                 selectedReciter === reciter.id ? "bg-purple-100 dark:bg-purple-900/50" : ""
                               }`}
                             >
-                              <p className="font-semibold text-gray-800 dark:text-gray-200 text-xs">{reciter.name}</p>
+                              <p className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{reciter.name}</p>
                               <p className="text-sm text-gray-600 dark:text-gray-400 text-right">
                                 {reciter.arabicName}
                               </p>
