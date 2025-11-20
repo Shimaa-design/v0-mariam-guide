@@ -43,6 +43,7 @@ import type { QuranVerse } from "./types"
 
 export default function AzkarApp() {
   const [mainTab, setMainTab] = useState("duaa")
+  const [rippleState, setRippleState] = useState<{ id: string; key: number } | null>(null)
 
   // Azkar state hook
   const {
@@ -328,10 +329,28 @@ export default function AzkarApp() {
                             </button>
                             {!isCompleted && (
                               <button
-                                onClick={() => handleIncrement(dhikr.id, dhikr.count, index)}
-                                className={`px-6 py-2 rounded-lg font-medium transition-all bg-gradient-to-r ${currentCategory.color} text-white hover:shadow-lg active:scale-95`}
+                                onClick={() => {
+                                  setRippleState({ id: dhikr.id, key: Date.now() })
+                                  handleIncrement(dhikr.id, dhikr.count, index)
+                                }}
+                                className={`relative overflow-hidden px-6 py-2 rounded-lg font-medium transition-all bg-gradient-to-r ${currentCategory.color} text-white hover:shadow-lg active:scale-95`}
                               >
-                                Count
+                                <span className="relative z-10">Count</span>
+                                {rippleState?.id === dhikr.id && (
+                                  <span
+                                    key={rippleState.key}
+                                    className="absolute inset-0 bg-white/40 rounded-full animate-ripple pointer-events-none"
+                                    style={{
+                                      left: "50%",
+                                      top: "50%",
+                                      width: "100%",
+                                      height: "100%",
+                                      transformOrigin: "center",
+                                      marginLeft: "-50%",
+                                      marginTop: "-50%",
+                                    }}
+                                  />
+                                )}
                               </button>
                             )}
                           </div>
@@ -370,7 +389,15 @@ export default function AzkarApp() {
                   }`}
                 >
                   <div className="p-5 py-4 px-4">
-                    <div className="flex justify-between mb-4 items-center">
+                    <div className="text-right mb-4 mt-2">
+                      <p className="text-xl leading-loose text-gray-800 dark:text-gray-100">{hadith.arabic}</p>
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mb-4">
+                      <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{hadith.translation}</p>
+                    </div>
+
+                    <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2">
                         <span
                           className={`text-sm font-semibold px-3 py-1 rounded-full ${
@@ -385,17 +412,7 @@ export default function AzkarApp() {
                           <span className="text-emerald-500 dark:text-emerald-400 text-sm font-semibold">✓ Read</span>
                         )}
                       </div>
-                    </div>
 
-                    <div className="text-right mb-4">
-                      <p className="text-xl leading-loose text-gray-800 dark:text-gray-100">{hadith.arabic}</p>
-                    </div>
-
-                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700 mb-4">
-                      <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{hadith.translation}</p>
-                    </div>
-
-                    <div className="flex justify-end">
                       <button
                         onClick={() => markHadithAsRead(hadith.id)}
                         className={`py-2 font-medium transition-all rounded-full px-5 text-sm ${
@@ -842,7 +859,7 @@ export default function AzkarApp() {
       )}
 
       {mainTab === "pray" && (
-        <div className="px-4 max-w-md mx-auto pb-32">
+        <div className="px-4 max-w-4xl mx-auto pb-32">
           {isLoadingPrayer ? (
             <div className="flex flex-col items-center justify-center py-20">
               <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-4" />

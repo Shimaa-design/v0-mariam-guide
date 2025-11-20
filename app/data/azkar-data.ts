@@ -13,8 +13,9 @@ import {
   BookMarked,
   DoorOpen,
   AlertCircle,
-} from 'lucide-react'
-import { LucideIcon } from 'lucide-react'
+  HeartCrack,
+} from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 
 export interface Zikr {
   id: string
@@ -47,6 +48,7 @@ export interface AzkarData {
   gratitude: AzkarCategory
   seeking_knowledge: AzkarCategory
   illness: AzkarCategory
+  death: AzkarCategory
 }
 
 export const azkarData: AzkarData = {
@@ -301,9 +303,8 @@ export const azkarData: AzkarData = {
       },
       {
         id: "w2",
-        arabic: "الْحَمْدُ لِلَّهِ الَّذِي عَافَانِي فِي جَسَدِي، وَرَدَّ عَلَيَّ رُوحِي، وَأَذِنَ لِي بِذِكْرِهِ",
-        translation:
-          "Praise be to Allah who has restored to me my health and returned my soul and has allowed me to remember Him",
+        arabic: "اللَّهُمَّ إِنِّي أَسْأَلُكَ خَيْرَ الْمَوْلِجِ وَخَيْرَ الْمَخْرَجِ",
+        translation: "O Allah, I ask You for the best entering and the best leaving",
         count: 1,
       },
     ],
@@ -316,8 +317,7 @@ export const azkarData: AzkarData = {
       {
         id: "h1",
         arabic: "بِسْمِ اللَّهِ وَلَجْنَا، وَبِسْمِ اللَّهِ خَرَجْنَا، وَعَلَى اللَّهِ رَبِّنَا تَوَكَّلْنَا",
-        translation:
-          "In the name of Allah we enter, in the name of Allah we leave, and upon Allah our Lord we depend",
+        translation: "In the name of Allah we enter, in the name of Allah we leave, and upon Allah our Lord we depend",
         count: 1,
       },
       {
@@ -539,6 +539,31 @@ export const azkarData: AzkarData = {
         translation:
           "In the name of Allah (3 times). I seek refuge in Allah and His power from the evil of what I find and fear (7 times)",
         count: 7,
+      },
+    ],
+  },
+  death: {
+    title: "Death",
+    icon: HeartCrack,
+    color: "from-slate-500 to-gray-700",
+    azkar: [
+      {
+        id: "d1",
+        arabic: "إِنَّا لِلَّهِ وَإِنَّا إِلَيْهِ رَاجِعُونَ",
+        translation: "Indeed we belong to Allah, and indeed to Him we will return",
+        count: 1,
+      },
+      {
+        id: "d2",
+        arabic: "اللَّهُمَّ اغْفِرْ لَهُ وَارْحَمْهُ، وَعَافِهِ، وَاعْفُ عَنْهُ",
+        translation: "O Allah, forgive him and have mercy on him and give him strength and pardon him",
+        count: 1,
+      },
+      {
+        id: "d3",
+        arabic: "اللَّهُمَّ أْجُرْنِي فِي مُصِيبَتِي وَأَخْلِفْ لِي خَيْرًا مِنْهَا",
+        translation: "O Allah, reward me for my affliction and replace it for me with something better",
+        count: 1,
       },
     ],
   },
