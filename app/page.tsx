@@ -1005,7 +1005,7 @@ export default function AzkarApp() {
                     { name: "Isha", time: prayerTimes.Isha, icon: "🌙" },
                   ]
                 })().map((prayer) => {
-                  const isNext = nextPrayer?.name === prayer.name
+                  const isNext = nextPrayer?.name === prayer.name && nextPrayer?.time === prayer.time
                   return (
                     <div
                       key={prayer.name}
