@@ -104,6 +104,13 @@ export function usePrayerTimes(mainTab: string) {
         datesToFetch.push(selectedDate)
       }
 
+      // Also ensure we fetch tomorrow's prayer times (needed for next prayer calculation)
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      if (!datesToFetch.some((d) => isSameDay(d, tomorrow))) {
+        datesToFetch.push(tomorrow)
+      }
+
       const allCached = datesToFetch.every((date) => prayerTimesCache.current[date.toDateString()])
 
       if (allCached) {
@@ -296,7 +303,20 @@ export function usePrayerTimes(mainTab: string) {
 
       if (!next) {
         // Next prayer is Fajr tomorrow
-        next = { ...prayerSeconds[0], seconds: prayerSeconds[0].seconds + 24 * 3600 }
+        const tomorrow = new Date(now)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        const tomorrowKey = tomorrow.toDateString()
+
+        // Get tomorrow's prayer times from cache if available
+        const tomorrowPrayerTimes = prayerTimesCache.current[tomorrowKey]
+        const tomorrowFajrTime = tomorrowPrayerTimes ? tomorrowPrayerTimes.Fajr : prayerTimes.Fajr
+
+        const [hours, minutes] = tomorrowFajrTime.split(":").map(Number)
+        next = {
+          name: "Fajr",
+          time: tomorrowFajrTime,
+          seconds: hours * 3600 + minutes * 60 + 24 * 3600
+        }
       }
 
       setNextPrayer({ name: next.name, time: next.time })
