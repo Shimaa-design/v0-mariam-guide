@@ -270,23 +270,17 @@ export function usePrayerTimes(mainTab: string) {
   useEffect(() => {
     if (!prayerTimes || mainTab !== "pray") return
 
-    // Only calculate countdown if selected date is today
-    const isSelectedToday = isSameDay(selectedDate, new Date())
-
-    if (!isSelectedToday) {
-      setNextPrayer(null)
-      setCountdown("")
-      return
-    }
+    const now = new Date()
+    const isSelectedToday = isSameDay(selectedDate, now)
 
     const updateCountdown = () => {
-      const now = new Date()
-      const currentTimeInSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()
-      const isFriday = now.getDay() === 5 // 5 = Friday
+      const currentTime = new Date()
+      const currentTimeInSeconds = currentTime.getHours() * 3600 + currentTime.getMinutes() * 60 + currentTime.getSeconds()
+      const selectedDateIsFriday = selectedDate.getDay() === 5 // 5 = Friday
 
       const prayers = [
         { name: "Fajr", time: prayerTimes.Fajr },
-        { name: isFriday ? "Jumuah" : "Dhuhr", time: isFriday ? prayerTimes.Jumuah : prayerTimes.Dhuhr },
+        { name: selectedDateIsFriday ? "Jumuah" : "Dhuhr", time: selectedDateIsFriday ? prayerTimes.Jumuah : prayerTimes.Dhuhr },
         { name: "Asr", time: prayerTimes.Asr },
         { name: "Maghrib", time: prayerTimes.Maghrib },
         { name: "Isha", time: prayerTimes.Isha },
@@ -298,32 +292,65 @@ export function usePrayerTimes(mainTab: string) {
         return { ...p, seconds: hours * 3600 + minutes * 60 }
       })
 
-      // Find next prayer
-      let next = prayerSeconds.find((p) => p.seconds > currentTimeInSeconds)
+      let next
+      let targetTimeInSeconds
 
-      if (!next) {
-        // Next prayer is Fajr tomorrow
-        const tomorrow = new Date(now)
-        tomorrow.setDate(tomorrow.getDate() + 1)
-        const tomorrowKey = tomorrow.toDateString()
+      if (isSelectedToday) {
+        // For today, find next prayer after current time
+        targetTimeInSeconds = currentTimeInSeconds
+        next = prayerSeconds.find((p) => p.seconds > currentTimeInSeconds)
 
-        // Get tomorrow's prayer times from cache if available
-        const tomorrowPrayerTimes = prayerTimesCache.current[tomorrowKey]
-        const tomorrowFajrTime = tomorrowPrayerTimes ? tomorrowPrayerTimes.Fajr : prayerTimes.Fajr
+        if (!next) {
+          // Next prayer is Fajr tomorrow
+          const tomorrow = new Date(currentTime)
+          tomorrow.setDate(tomorrow.getDate() + 1)
+          const tomorrowKey = tomorrow.toDateString()
 
-        const [hours, minutes] = tomorrowFajrTime.split(":").map(Number)
-        next = {
-          name: "Fajr",
-          time: tomorrowFajrTime,
-          seconds: hours * 3600 + minutes * 60 + 24 * 3600
+          // Get tomorrow's prayer times from cache if available
+          const tomorrowPrayerTimes = prayerTimesCache.current[tomorrowKey]
+          const tomorrowFajrTime = tomorrowPrayerTimes ? tomorrowPrayerTimes.Fajr : prayerTimes.Fajr
+
+          const [hours, minutes] = tomorrowFajrTime.split(":").map(Number)
+          next = {
+            name: "Fajr",
+            time: tomorrowFajrTime,
+            seconds: hours * 3600 + minutes * 60 + 24 * 3600
+          }
+        }
+      } else {
+        // For future dates, show the first prayer of that day as "next"
+        // For past dates, don't show next prayer
+        const selectedDateMidnight = new Date(selectedDate)
+        selectedDateMidnight.setHours(0, 0, 0, 0)
+        const todayMidnight = new Date(now)
+        todayMidnight.setHours(0, 0, 0, 0)
+
+        if (selectedDateMidnight > todayMidnight) {
+          // Future date - first prayer is next
+          next = prayerSeconds[0] // Fajr is always first
+          targetTimeInSeconds = currentTimeInSeconds // Will calculate from now to that prayer time on future date
+        } else {
+          // Past date - don't show next prayer
+          setNextPrayer(null)
+          setCountdown("")
+          return
         }
       }
 
       setNextPrayer({ name: next.name, time: next.time })
 
       // Calculate countdown
-      let diffInSeconds = next.seconds - currentTimeInSeconds
-      if (diffInSeconds < 0) diffInSeconds += 24 * 3600
+      let diffInSeconds
+      if (isSelectedToday) {
+        diffInSeconds = next.seconds - currentTimeInSeconds
+        if (diffInSeconds < 0) diffInSeconds += 24 * 3600
+      } else {
+        // For future dates, calculate time from now to that prayer on that day
+        const selectedDateCopy = new Date(selectedDate)
+        const [hours, minutes] = next.time.split(":").map(Number)
+        selectedDateCopy.setHours(hours, minutes, 0, 0)
+        diffInSeconds = Math.floor((selectedDateCopy.getTime() - currentTime.getTime()) / 1000)
+      }
 
       const hours = Math.floor(diffInSeconds / 3600)
       const minutes = Math.floor((diffInSeconds % 3600) / 60)
