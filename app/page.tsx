@@ -19,6 +19,8 @@ import {
   Clock,
   AlertCircle,
   ArrowUpDown,
+  Bell,
+  BellOff,
 } from "lucide-react"
 import { Toaster } from "sonner"
 import { ThemeToggle } from "@/components/theme-toggle"
@@ -37,6 +39,8 @@ import { useHadithState } from "./hooks/useHadithState"
 import { useAzkarState } from "./hooks/useAzkarState"
 import { useAdhanAudio } from "./hooks/useAdhanAudio"
 import { useDuaaAudio } from "./hooks/useDuaaAudio"
+import { useNotificationPermission } from "./hooks/useNotificationPermission"
+import { usePrayerNotifications } from "./hooks/usePrayerNotifications"
 
 // Types
 import type { QuranVerse } from "./types"
@@ -99,6 +103,45 @@ export default function AzkarApp() {
   // Audio hooks
   const { isPlayingAdhan, adhanAudioRef, toggleAdhan } = useAdhanAudio()
   const { playingDuaaId, speechSynthesisRef, arabicVoiceAvailable, playDuaaAudio } = useDuaaAudio()
+
+  // Notification hooks
+  const { permission, isSupported, requestPermission, isGranted } = useNotificationPermission()
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+
+  // Load notification preference from localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedPref = localStorage.getItem("prayerNotificationsEnabled")
+      setNotificationsEnabled(savedPref === "true")
+    }
+  }, [])
+
+  // Save notification preference to localStorage
+  const toggleNotifications = async () => {
+    if (!isSupported) {
+      alert("Notifications are not supported in this browser")
+      return
+    }
+
+    if (!isGranted) {
+      const result = await requestPermission()
+      if (result !== "granted") {
+        alert("Please enable notifications in your browser settings to receive prayer time alerts")
+        return
+      }
+    }
+
+    const newState = !notificationsEnabled
+    setNotificationsEnabled(newState)
+    localStorage.setItem("prayerNotificationsEnabled", String(newState))
+  }
+
+  // Prayer notifications hook
+  usePrayerNotifications({
+    prayerTimes,
+    isEnabled: notificationsEnabled && isGranted,
+    notificationPermission: permission,
+  })
 
   const playClickSound = () => {
     try {
@@ -174,7 +217,9 @@ export default function AzkarApp() {
       }
     `
     document.head.appendChild(style)
-    return () => document.head.removeChild(style)
+    return () => {
+      document.head.removeChild(style)
+    }
   }, [])
 
   return (
@@ -966,29 +1011,59 @@ export default function AzkarApp() {
                         {location.city}, {location.country}
                       </p>
                     </div>
-                    {/* Adhan Button */}
-                    <button
-                      onClick={toggleAdhan}
-                      className={`px-4 py-2 rounded-lg font-medium text-white shadow-md transition-all hover:shadow-lg active:scale-95 ${
-                        isPlayingAdhan
-                          ? "bg-gradient-to-r from-indigo-600 to-blue-700 hover:from-indigo-700 hover:to-blue-800"
-                          : "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        {isPlayingAdhan ? (
-                          <>
-                            <Pause className="w-5 h-5" />
-                            <span className="text-sm">Pause</span>
-                          </>
-                        ) : (
-                          <>
-                            <Volume2 className="w-5 h-5" />
-                            <span className="text-sm">Adhan</span>
-                          </>
-                        )}
-                      </div>
-                    </button>
+                    <div className="flex gap-2">
+                      {/* Notification Toggle Button */}
+                      <button
+                        onClick={toggleNotifications}
+                        className={`px-4 py-2 rounded-lg font-medium text-white shadow-md transition-all hover:shadow-lg active:scale-95 ${
+                          notificationsEnabled && isGranted
+                            ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+                            : "bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700"
+                        }`}
+                        title={
+                          notificationsEnabled && isGranted
+                            ? "Notifications enabled - you'll be alerted at prayer times"
+                            : "Enable notifications to get alerts at prayer times"
+                        }
+                      >
+                        <div className="flex items-center gap-2">
+                          {notificationsEnabled && isGranted ? (
+                            <>
+                              <Bell className="w-5 h-5" />
+                              <span className="text-sm">Notify</span>
+                            </>
+                          ) : (
+                            <>
+                              <BellOff className="w-5 h-5" />
+                              <span className="text-sm">Notify</span>
+                            </>
+                          )}
+                        </div>
+                      </button>
+                      {/* Adhan Button */}
+                      <button
+                        onClick={toggleAdhan}
+                        className={`px-4 py-2 rounded-lg font-medium text-white shadow-md transition-all hover:shadow-lg active:scale-95 ${
+                          isPlayingAdhan
+                            ? "bg-gradient-to-r from-indigo-600 to-blue-700 hover:from-indigo-700 hover:to-blue-800"
+                            : "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {isPlayingAdhan ? (
+                            <>
+                              <Pause className="w-5 h-5" />
+                              <span className="text-sm">Pause</span>
+                            </>
+                          ) : (
+                            <>
+                              <Volume2 className="w-5 h-5" />
+                              <span className="text-sm">Adhan</span>
+                            </>
+                          )}
+                        </div>
+                      </button>
+                    </div>
                   </div>
                 </div>
                 {(() => {
