@@ -1030,12 +1030,12 @@ export default function AzkarApp() {
                           {notificationsEnabled && isGranted ? (
                             <>
                               <Bell className="w-5 h-5" />
-                              <span className="text-sm">Notify</span>
+                              <span className="text-sm">On</span>
                             </>
                           ) : (
                             <>
                               <BellOff className="w-5 h-5" />
-                              <span className="text-sm">Notify</span>
+                              <span className="text-sm">Off</span>
                             </>
                           )}
                         </div>
