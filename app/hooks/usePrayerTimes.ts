@@ -104,6 +104,13 @@ export function usePrayerTimes(mainTab: string) {
         datesToFetch.push(selectedDate)
       }
 
+      // Also ensure we fetch tomorrow's prayer times (needed for next prayer calculation)
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      if (!datesToFetch.some((d) => isSameDay(d, tomorrow))) {
+        datesToFetch.push(tomorrow)
+      }
+
       const allCached = datesToFetch.every((date) => prayerTimesCache.current[date.toDateString()])
 
       if (allCached) {
@@ -263,52 +270,76 @@ export function usePrayerTimes(mainTab: string) {
   useEffect(() => {
     if (!prayerTimes || mainTab !== "pray") return
 
-    // Only calculate countdown if selected date is today
-    const isSelectedToday = isSameDay(selectedDate, new Date())
-
-    if (!isSelectedToday) {
-      setNextPrayer(null)
-      setCountdown("")
-      return
-    }
-
     const updateCountdown = () => {
-      const now = new Date()
-      const currentTimeInSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()
-      const isFriday = now.getDay() === 5 // 5 = Friday
+      const currentTime = new Date()
+      const currentTimeInSeconds = currentTime.getHours() * 3600 + currentTime.getMinutes() * 60 + currentTime.getSeconds()
 
-      const prayers = [
-        { name: "Fajr", time: prayerTimes.Fajr },
-        { name: isFriday ? "Jumuah" : "Dhuhr", time: isFriday ? prayerTimes.Jumuah : prayerTimes.Dhuhr },
-        { name: "Asr", time: prayerTimes.Asr },
-        { name: "Maghrib", time: prayerTimes.Maghrib },
-        { name: "Isha", time: prayerTimes.Isha },
+      // Only calculate next prayer based on TODAY's date and current time
+      // This ensures we only highlight ONE prayer - the actual next one from now
+      const today = new Date()
+      const isSelectedToday = isSameDay(selectedDate, today)
+      const todayIsFriday = today.getDay() === 5 // 5 = Friday
+
+      // Get today's prayer times from cache
+      const todayKey = today.toDateString()
+      const todayPrayerTimes = prayerTimesCache.current[todayKey] || prayerTimes
+
+      const todayPrayers = [
+        { name: "Fajr", time: todayPrayerTimes.Fajr },
+        { name: todayIsFriday ? "Jumuah" : "Dhuhr", time: todayIsFriday ? todayPrayerTimes.Jumuah : todayPrayerTimes.Dhuhr },
+        { name: "Asr", time: todayPrayerTimes.Asr },
+        { name: "Maghrib", time: todayPrayerTimes.Maghrib },
+        { name: "Isha", time: todayPrayerTimes.Isha },
       ]
 
-      // Convert prayer times to seconds
-      const prayerSeconds = prayers.map((p) => {
+      // Convert today's prayer times to seconds
+      const todayPrayerSeconds = todayPrayers.map((p) => {
         const [hours, minutes] = p.time.split(":").map(Number)
         return { ...p, seconds: hours * 3600 + minutes * 60 }
       })
 
-      // Find next prayer
-      let next = prayerSeconds.find((p) => p.seconds > currentTimeInSeconds)
+      // Find next prayer from current time
+      let next = todayPrayerSeconds.find((p) => p.seconds > currentTimeInSeconds)
+      let nextPrayerDate = today
 
       if (!next) {
         // Next prayer is Fajr tomorrow
-        next = { ...prayerSeconds[0], seconds: prayerSeconds[0].seconds + 24 * 3600 }
+        const tomorrow = new Date(currentTime)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        const tomorrowKey = tomorrow.toDateString()
+        nextPrayerDate = tomorrow
+
+        // Get tomorrow's prayer times from cache if available
+        const tomorrowPrayerTimes = prayerTimesCache.current[tomorrowKey]
+        const tomorrowFajrTime = tomorrowPrayerTimes ? tomorrowPrayerTimes.Fajr : todayPrayerTimes.Fajr
+
+        const [hours, minutes] = tomorrowFajrTime.split(":").map(Number)
+        next = {
+          name: "Fajr",
+          time: tomorrowFajrTime,
+          seconds: hours * 3600 + minutes * 60 + 24 * 3600
+        }
       }
 
-      setNextPrayer({ name: next.name, time: next.time })
+      // Only show next prayer if we're viewing the date that contains it
+      const isViewingNextPrayerDate = isSameDay(selectedDate, nextPrayerDate)
 
-      // Calculate countdown
-      let diffInSeconds = next.seconds - currentTimeInSeconds
-      if (diffInSeconds < 0) diffInSeconds += 24 * 3600
+      if (isViewingNextPrayerDate) {
+        setNextPrayer({ name: next.name, time: next.time })
 
-      const hours = Math.floor(diffInSeconds / 3600)
-      const minutes = Math.floor((diffInSeconds % 3600) / 60)
-      const seconds = diffInSeconds % 60
-      setCountdown(`${hours}h ${minutes}m ${seconds}s`)
+        // Calculate countdown
+        let diffInSeconds = next.seconds - currentTimeInSeconds
+        if (diffInSeconds < 0) diffInSeconds += 24 * 3600
+
+        const hours = Math.floor(diffInSeconds / 3600)
+        const minutes = Math.floor((diffInSeconds % 3600) / 60)
+        const seconds = diffInSeconds % 60
+        setCountdown(`${hours}h ${minutes}m ${seconds}s`)
+      } else {
+        // Not viewing the date with the next prayer
+        setNextPrayer(null)
+        setCountdown("")
+      }
     }
 
     updateCountdown()
