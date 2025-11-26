@@ -360,17 +360,17 @@ export function useQuranData(mainTab: string) {
 
   const goToPreviousSurah = () => {
     if (!selectedSurah) return
-    const currentIndex = quranData.findIndex((s) => s.number === selectedSurah.number)
+    const currentIndex = sortedQuranData.findIndex((s) => s.number === selectedSurah.number)
     if (currentIndex > 0) {
-      openSurah(quranData[currentIndex - 1])
+      openSurah(sortedQuranData[currentIndex - 1])
     }
   }
 
   const goToNextSurah = () => {
     if (!selectedSurah) return
-    const currentIndex = quranData.findIndex((s) => s.number === selectedSurah.number)
-    if (currentIndex < quranData.length - 1) {
-      openSurah(quranData[currentIndex + 1])
+    const currentIndex = sortedQuranData.findIndex((s) => s.number === selectedSurah.number)
+    if (currentIndex < sortedQuranData.length - 1) {
+      openSurah(sortedQuranData[currentIndex + 1])
     }
   }
 
