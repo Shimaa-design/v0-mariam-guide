@@ -1,0 +1,26 @@
+{
+  "name": "Mariam Guide",
+  "short_name": "Mariam Guide",
+  "description": "Islamic remembrance, Hadith collection, Quran reading, and Prayer Times",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/apple-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["lifestyle", "education"],
+  "prefer_related_applications": false
+}

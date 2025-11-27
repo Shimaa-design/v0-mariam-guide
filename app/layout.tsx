@@ -32,6 +32,7 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  manifest: "/manifest.json",
 }
 
 export default function RootLayout({
@@ -49,6 +50,26 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://api.alquran.cloud" />
         <link rel="dns-prefetch" href="https://api.aladhan.com" />
         <link rel="dns-prefetch" href="https://api.bigdatacloud.net" />
+
+        {/* Service Worker Registration */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                  navigator.serviceWorker
+                    .register('/sw.js')
+                    .then((registration) => {
+                      console.log('ServiceWorker registered:', registration.scope);
+                    })
+                    .catch((error) => {
+                      console.log('ServiceWorker registration failed:', error);
+                    });
+                });
+              }
+            `,
+          }}
+        />
       </head>
       <body className={`font-sans antialiased`}>
         <ThemeProvider
