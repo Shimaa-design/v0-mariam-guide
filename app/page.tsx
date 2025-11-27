@@ -105,8 +105,9 @@ export default function AzkarApp() {
   const { playingDuaaId, speechSynthesisRef, arabicVoiceAvailable, playDuaaAudio } = useDuaaAudio()
 
   // Notification hooks
-  const { permission, isSupported, requestPermission, isGranted } = useNotificationPermission()
+  const { permission, isSupported, requestPermission, isGranted, iosDevice, iosVersion, isReliable } = useNotificationPermission()
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+  const [showIosWarning, setShowIosWarning] = useState(false)
 
   // Load notification preference from localStorage
   useEffect(() => {
@@ -132,6 +133,13 @@ export default function AzkarApp() {
     }
 
     const newState = !notificationsEnabled
+
+    // Show iOS warning if enabling on iOS device
+    if (newState && iosDevice && !isReliable) {
+      setShowIosWarning(true)
+      setTimeout(() => setShowIosWarning(false), 8000) // Hide after 8 seconds
+    }
+
     setNotificationsEnabled(newState)
     localStorage.setItem("prayerNotificationsEnabled", String(newState))
   }
@@ -1118,6 +1126,25 @@ export default function AzkarApp() {
                   )
                 })}
               </div>
+
+              {/* iOS Warning Banner */}
+              {showIosWarning && (
+                <div className="mt-6 mb-4 p-4 bg-amber-50 dark:bg-amber-900/30 border-2 border-amber-300 dark:border-amber-700 rounded-xl animate-fade-in">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-amber-900 dark:text-amber-200 text-sm mb-1">
+                        Limited notification support on iOS
+                      </p>
+                      <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                        {iosVersion && iosVersion.major < 16
+                          ? "Your iOS version doesn't support background notifications. Please keep the app open to receive prayer time alerts."
+                          : "Notifications on iOS only work when the app is open. For best results, keep the app in the foreground around prayer times."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Bottom Date Navigation */}
               <div className="mt-6 mb-4">

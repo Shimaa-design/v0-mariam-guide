@@ -51,14 +51,29 @@ export function usePrayerTimes(mainTab: string) {
   const fetchPrayerTimesForDate = async (date: Date, locationInfo: LocationData) => {
     const dateKey = date.toDateString()
 
-    // Skip if already cached
+    // Skip if already cached in memory
     if (prayerTimesCache.current[dateKey]) {
       return { success: true, dateKey, data: prayerTimesCache.current[dateKey] }
+    }
+
+    // Try to load from localStorage first
+    try {
+      const cachedData = localStorage.getItem(`prayer-times-${dateKey}`)
+      if (cachedData) {
+        const parsed = JSON.parse(cachedData)
+        prayerTimesCache.current[dateKey] = parsed
+        return { success: true, dateKey, data: parsed }
+      }
+    } catch (e) {
+      console.warn('Error loading cached prayer times:', e)
     }
 
     try {
       const prayerResponse = await fetch(
         `https://api.aladhan.com/v1/timings/${Math.floor(date.getTime() / 1000)}?latitude=${locationInfo.latitude}&longitude=${locationInfo.longitude}&method=2`,
+        {
+          signal: AbortSignal.timeout(10000) // 10 second timeout
+        }
       )
 
       if (!prayerResponse.ok) {
@@ -79,8 +94,16 @@ export function usePrayerTimes(mainTab: string) {
           Jumuah: timings.Dhuhr, // Jumuah (Friday prayer) is at Dhuhr time
         }
 
-        // Cache the prayer times for this date
+        // Cache the prayer times in memory
         prayerTimesCache.current[dateKey] = newPrayerTimes
+
+        // Save to localStorage for offline access
+        try {
+          localStorage.setItem(`prayer-times-${dateKey}`, JSON.stringify(newPrayerTimes))
+        } catch (e) {
+          console.warn('Error saving prayer times to localStorage:', e)
+        }
+
         return { success: true, dateKey, data: newPrayerTimes }
       } else {
         console.warn(`Failed to fetch prayer times for ${dateKey}:`, prayerData)
@@ -88,6 +111,19 @@ export function usePrayerTimes(mainTab: string) {
       }
     } catch (err) {
       console.warn(`Error fetching prayer times for ${dateKey}:`, err)
+
+      // Check if we have any cached data to fall back to
+      try {
+        const cachedData = localStorage.getItem(`prayer-times-${dateKey}`)
+        if (cachedData) {
+          const parsed = JSON.parse(cachedData)
+          prayerTimesCache.current[dateKey] = parsed
+          return { success: true, dateKey, data: parsed, fromCache: true }
+        }
+      } catch (e) {
+        console.warn('Error loading cached prayer times as fallback:', e)
+      }
+
       return { success: false, dateKey, error: err instanceof Error ? err.message : "Network error" }
     }
   }
@@ -214,6 +250,11 @@ export function usePrayerTimes(mainTab: string) {
           const retryResult = await fetchPrayerTimesForDate(selectedDate, locationInfo)
           if (retryResult.success && retryResult.data) {
             setPrayerTimes(retryResult.data)
+            setIsLoadingPrayer(false)
+            // Show info if loaded from cache
+            if (retryResult.fromCache) {
+              console.info('Loaded prayer times from offline cache')
+            }
           } else {
             throw new Error(
               "Failed to fetch prayer times for the selected date. Please check your internet connection.",
@@ -221,9 +262,8 @@ export function usePrayerTimes(mainTab: string) {
           }
         } else {
           setPrayerTimes(selectedDatePrayer)
+          setIsLoadingPrayer(false)
         }
-
-        setIsLoadingPrayer(false)
       } catch (error) {
         console.error("Error fetching prayer times:", error)
 
